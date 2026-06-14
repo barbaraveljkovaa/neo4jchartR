@@ -32,6 +32,10 @@ def get_patients_with_diseases():
 
 def get_doctors_and_specialties():
     """Retrieve all doctors and their specialties."""
+    if USE_GRAPH_DEMO:
+        from graph_demo_data import demo_get_doctors_and_specialties
+
+        return demo_get_doctors_and_specialties()
     cypher = """
     MATCH (d:Doctor)
     RETURN d.id AS doctor_id, d.name AS doctor_name, d.specialty AS specialty
@@ -53,6 +57,10 @@ def get_doctors_treating_diseases():
 
 def get_patient_appointments(patient_id: str):
     """Retrieve all appointments of a patient by patient id."""
+    if USE_GRAPH_DEMO:
+        from graph_demo_data import demo_get_patient_appointments
+
+        return demo_get_patient_appointments(patient_id)
     cypher = """
     MATCH (p:Patient {id: $patient_id})-[:HAS_APPOINTMENT]->(a:Appointment)
     RETURN a.id AS appointment_id, a.date AS appointment_date
@@ -63,6 +71,10 @@ def get_patient_appointments(patient_id: str):
 
 def get_hospitals_visited_by_patients():
     """Retrieve hospitals visited by patients (via appointments or encounters)."""
+    if USE_GRAPH_DEMO:
+        from graph_demo_data import demo_get_hospitals_visited_by_patients
+
+        return demo_get_hospitals_visited_by_patients()
     cypher = """
     MATCH (p:Patient)-[:HAS_APPOINTMENT]->(a:Appointment)-[:AT_HOSPITAL]->(h:Hospital)
     RETURN p.id AS patient_id, p.name AS patient_name,
@@ -197,6 +209,10 @@ def get_protocol_guidelines():
     Returns list of dicts with disease_id, disease_name, drug_id, drug_name, procedure_id, procedure_name,
     followup_id, followup_name.
     """
+    if USE_GRAPH_DEMO:
+        from graph_demo_data import demo_get_protocol_guidelines
+
+        return demo_get_protocol_guidelines()
     cypher = """
     MATCH (d:Disease)-[:RECOMMENDED_DRUG]->(drug:Drug)-[:RECOMMENDED_PROCEDURE]->(proc:Procedure)-[:FOLLOW_UP]->(f:FollowUp)
     RETURN d.id AS disease_id, d.name AS disease_name, d.icd10 AS disease_icd10,
@@ -475,7 +491,9 @@ def get_patients_with_clinical_state():
 def get_next_patient_id():
     """Get the next available patient ID (P<n+1>) based on existing patients."""
     if USE_GRAPH_DEMO:
-        return "P999"
+        from graph_demo_data import demo_next_patient_id
+
+        return demo_next_patient_id()
     cypher = """
     MATCH (p:Patient)
     WITH p.id AS pid
@@ -513,6 +531,10 @@ def patient_exists(patient_id: str) -> bool:
 
 
 def _next_note_id() -> str:
+    if USE_GRAPH_DEMO:
+        from graph_demo_data import demo_next_note_id
+
+        return demo_next_note_id()
     rows = run_query("MATCH (n:PatientNote) RETURN n.id AS id")
     max_num = 0
     for r in rows:
@@ -614,9 +636,9 @@ def append_document_to_patient(
     Does not create a new Patient node.
     """
     if USE_GRAPH_DEMO:
-        raise RuntimeError(
-            "Saving patients to the graph requires Neo4j. Set USE_GRAPH_DEMO=0 and configure NEO4J_URI."
-        )
+        from graph_demo_data import demo_append_document_to_patient
+
+        return demo_append_document_to_patient(patient_id, data, document_summary)
     pid = (patient_id or "").strip()
     if not patient_exists(pid):
         raise ValueError(f"Patient not found: {pid}")
@@ -686,9 +708,9 @@ def create_patient_from_document(data: dict) -> dict:
     Returns dict with patient_id, patient_name and all created entities.
     """
     if USE_GRAPH_DEMO:
-        raise RuntimeError(
-            "Saving patients to the graph requires Neo4j. Set USE_GRAPH_DEMO=0 and configure NEO4J_URI."
-        )
+        from graph_demo_data import demo_create_patient_from_document
+
+        return demo_create_patient_from_document(data)
     pid = get_next_patient_id()
     name = data.get("patient_name") or f"Patient {pid}"
     age = data.get("age")
@@ -897,6 +919,10 @@ def get_sepsis_guidelines():
     Get sepsis guideline with recommended actions, labs, drugs, procedures, follow-up.
     Returns list of dicts with guideline and related node ids/names and thresholds.
     """
+    if USE_GRAPH_DEMO:
+        from graph_demo_data import demo_get_sepsis_guidelines
+
+        return demo_get_sepsis_guidelines()
     cypher = """
     MATCH (g:SepsisGuideline)
     OPTIONAL MATCH (g)-[:RECOMMENDS_ACTION]->(a:RecommendedAction)

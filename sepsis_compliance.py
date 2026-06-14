@@ -51,8 +51,13 @@ def run_sepsis_guidelines(patient_id: str) -> dict[str, Any]:
         }
 
     # Get patient name
-    rows = run_query("MATCH (p:Patient {id: $pid}) RETURN p.name AS name", {"pid": patient_id})
-    patient_name = (rows[0].get("name") or patient_id) if rows else patient_id
+    if USE_GRAPH_DEMO:
+        from graph_demo_data import demo_get_patient_name
+
+        patient_name = demo_get_patient_name(patient_id) or patient_id
+    else:
+        rows = run_query("MATCH (p:Patient {id: $pid}) RETURN p.name AS name", {"pid": patient_id})
+        patient_name = (rows[0].get("name") or patient_id) if rows else patient_id
 
     g = guidelines[0]
     sofa_threshold = g.get("sofa_threshold_high") or 2
@@ -192,7 +197,9 @@ def sync_violations_to_neo4j() -> int:
     Returns count of violation nodes created.
     """
     if USE_GRAPH_DEMO:
-        return 0
+        from graph_demo_data import demo_sync_violations
+
+        return demo_sync_violations()
     run_query("MATCH (v:Violation) DETACH DELETE v")
     count = 0
     # Sepsis guideline violations

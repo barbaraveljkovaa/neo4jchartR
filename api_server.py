@@ -51,12 +51,8 @@ app.add_middleware(
 
 
 def _graph_demo_blocks_persisted_queries() -> None:
-    """AI agent, benchmark, and patient creation execute Cypher or expect a writable graph."""
-    if USE_GRAPH_DEMO:
-        raise HTTPException(
-            status_code=503,
-            detail="This action needs a live Neo4j database. Set USE_GRAPH_DEMO=0 (or remove it) and configure NEO4J_URI in .env.",
-        )
+    """Legacy guard — demo mode now supports the full API via in-memory graph."""
+    return
 
 
 # -------- Request/response models --------
