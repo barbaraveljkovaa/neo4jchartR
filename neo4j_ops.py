@@ -6,6 +6,8 @@ Graph model:
                  HAS_ENCOUNTER, AT_HOSPITAL, INCLUDES_LAB, INCLUDES_PROCEDURE, PERFORMED_BY
   Properties: id, name, age, sex, specialty, date, diagnosed_on, icd10
 """
+
+from __future__ import annotations
 from neo4j_connect import run_query
 from neo4j_config import USE_GRAPH_DEMO
 
@@ -557,6 +559,24 @@ def _build_document_note_text(data: dict, document_summary: str | None = None) -
         parts.append("Diagnoses noted: " + ", ".join(diseases) + ".")
     if symptoms:
         parts.append("Symptoms noted: " + ", ".join(symptoms) + ".")
+    labs = data.get("lab_results") or []
+    if labs:
+        parts.append(
+            "Lab results: "
+            + ", ".join(f"{x.get('name')} {x.get('result_value')}{x.get('unit') or ''}".strip() for x in labs)
+            + "."
+        )
+    imaging = data.get("imaging_studies") or []
+    if imaging:
+        parts.append(
+            "Imaging: "
+            + "; ".join(
+                (x.get("name") or "Study")
+                + (f" — {x['findings']}" if x.get("findings") else "")
+                for x in imaging
+            )
+            + "."
+        )
     if clinical:
         cv = ", ".join(f"{k}={v}" for k, v in clinical.items())
         parts.append("Clinical values: " + cv + ".")
@@ -627,6 +647,67 @@ def _apply_extracted_data_to_patient(pid: str, data: dict) -> None:
                 params,
             )
 
+    import time
+    from datetime import date
+
+    labs = data.get("lab_results") or []
+    imaging = data.get("imaging_studies") or []
+    if labs or imaging:
+        enc_id = f"E_{pid}_doc_{int(time.time())}"
+        run_query(
+            "CREATE (e:Encounter {id: $eid, date: $date, type: 'Patient upload', notes: $notes}) "
+            "WITH e MATCH (p:Patient {id: $pid}) CREATE (p)-[:HAS_ENCOUNTER]->(e)",
+            {
+                "eid": enc_id,
+                "date": date.today().isoformat(),
+                "notes": "Lab or imaging results uploaded from patient portal.",
+                "pid": pid,
+            },
+        )
+        for lab in labs:
+            if not isinstance(lab, dict):
+                continue
+            name = (lab.get("name") or "Lab").strip()
+            val = lab.get("result_value")
+            if not name or val is None:
+                continue
+            lab_id = "L_" + pid + "_UP_" + "".join(c if c.isalnum() else "_" for c in name.lower())[:32]
+            run_query(
+                "MERGE (l:Lab {id: $lid}) SET l.name = $name, l.result_value = $val, "
+                "l.unit = $unit, l.normal_range = $nr, l.date = $date "
+                "WITH l MATCH (e:Encounter {id: $eid}) CREATE (e)-[:ORDERED_LAB]->(l)",
+                {
+                    "lid": lab_id,
+                    "name": name,
+                    "val": str(val),
+                    "unit": lab.get("unit") or "",
+                    "nr": lab.get("normal_range") or "",
+                    "date": lab.get("date") or date.today().isoformat(),
+                    "eid": enc_id,
+                },
+            )
+        for img in imaging:
+            if not isinstance(img, dict):
+                continue
+            name = (img.get("name") or img.get("modality") or "Imaging study").strip()
+            if not name:
+                continue
+            proc_id = "PROC_UP_" + "".join(c if c.isalnum() else "_" for c in name.lower())[:40]
+            findings = (img.get("findings") or img.get("impression") or "").strip()
+            run_query(
+                "MERGE (pr:Procedure {id: $prid}) SET pr.name = $name, pr.findings = $findings, pr.date = $date "
+                "WITH pr MATCH (p:Patient {id: $pid}), (e:Encounter {id: $eid}) "
+                "MERGE (p)-[:HAD_PROCEDURE]->(pr) MERGE (e)-[:INCLUDES_PROCEDURE]->(pr)",
+                {
+                    "prid": proc_id,
+                    "name": name,
+                    "findings": findings,
+                    "date": img.get("date") or date.today().isoformat(),
+                    "pid": pid,
+                    "eid": enc_id,
+                },
+            )
+
 
 def append_document_to_patient(
     patient_id: str, data: dict, document_summary: str | None = None
@@ -688,6 +769,8 @@ def append_document_to_patient(
         "symptoms": data.get("symptoms") or [],
         "diseases": data.get("diseases") or [],
         "clinical_values": data.get("clinical_values") or {},
+        "lab_results": data.get("lab_results") or [],
+        "imaging_studies": data.get("imaging_studies") or [],
         "note_id": note_id,
         "note_text": note_text,
         "mode": "append",
@@ -732,6 +815,8 @@ def create_patient_from_document(data: dict) -> dict:
         "symptoms": data.get("symptoms") or [],
         "diseases": data.get("diseases") or [],
         "clinical_values": clinical,
+        "lab_results": data.get("lab_results") or [],
+        "imaging_studies": data.get("imaging_studies") or [],
         "mode": "create",
     }
     note_text = _build_document_note_text(data)

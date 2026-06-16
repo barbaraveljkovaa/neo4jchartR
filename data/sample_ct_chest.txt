@@ -1,0 +1,12 @@
+RADIOLOGY REPORT — CT CHEST WITH CONTRAST
+Patient: Carol White
+Age: 28 years
+Sex: female
+
+Exam: CT chest with IV contrast
+
+Findings: Patchy ground-glass opacities in the right lower lobe. Small pleural effusion. No pulmonary embolism.
+
+Impression: Findings consistent with early pneumonia. Recommend correlation with fever and WBC. Follow-up imaging in 6 weeks if symptoms persist.
+
+Symptoms noted: fever, shortness of breath, wheezing

@@ -197,6 +197,7 @@ def rows_to_vis_payload(rows: list[dict], patient_id: str) -> dict[str, Any]:
             sev = (props.get("severity") or "warning").lower()
             bg = VIOLATION_SEVERITY_COLORS.get(sev, "#f59e0b")
             desc = props.get("description") or raw_name
+            raw_name = str(desc)
             canvas_label = _short_display_label(desc, "Violation", other_max=16)
 
         # Match legacy pyvis dashboard: circular nodes (dot), soft shadow, label stroke (readable on color fills).
@@ -240,6 +241,7 @@ def rows_to_vis_payload(rows: list[dict], patient_id: str) -> dict[str, Any]:
             node_entry["doctor_specialty"] = props.get("specialty")
         if label == "Violation":
             node_entry["violation_reason"] = props.get("reason")
+            node_entry["violation_severity"] = sev
         if label == "PatientNote":
             node_entry["note_preview"] = str(props.get("text") or "")[:400]
         if clinical_metrics is not None:

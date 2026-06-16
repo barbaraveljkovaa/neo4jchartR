@@ -12,6 +12,8 @@ Structure:
   Patient -> HAS_DISEASE -> Disease; Disease -> RECOMMENDED_DRUG -> Drug -> RECOMMENDED_PROCEDURE -> Procedure -> FOLLOW_UP -> FollowUp
   Patient -> FOLLOWED_UP_WITH -> FollowUp (date, status)
 """
+
+from __future__ import annotations
 from neo4j_connect import run_query
 
 

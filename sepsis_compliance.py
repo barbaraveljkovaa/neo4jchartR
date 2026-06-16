@@ -3,6 +3,8 @@ Sepsis guideline evaluation: compare patient clinical state to sepsis guidelines
 Returns violations, compliance, and dashboard-ready paths (nodes, colors, hover_info, highlight_query).
 Uses neo4j_ops and neo4j_connect.run_query.
 """
+
+from __future__ import annotations
 from typing import Any
 
 from neo4j_config import USE_GRAPH_DEMO

@@ -1,6 +1,8 @@
 """
 Connect to Neo4j instance (e.g. BarbaraTest) and run queries on the default database.
 """
+
+from __future__ import annotations
 from neo4j import GraphDatabase
 from neo4j_config import NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD, NEO4J_DATABASE, USE_GRAPH_DEMO
 

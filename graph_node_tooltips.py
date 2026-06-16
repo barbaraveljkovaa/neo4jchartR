@@ -147,6 +147,9 @@ def format_node_tooltip_plain(
     if neo4j_label == "Procedure":
         desc = "Procedure tied to evaluation or treatment for this patient."
         lines: list[str | None] = []
+        findings = _clean_str(props.get("findings"))
+        if findings:
+            lines.append(_detail_line("Findings", _truncate(findings, 280)))
         if recommended_catalog:
             desc = (
                 "Procedure suggested by linked guideline pathways in this graph. "

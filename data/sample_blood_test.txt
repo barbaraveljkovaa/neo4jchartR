@@ -1,0 +1,22 @@
+OUTPATIENT LABORATORY REPORT
+Patient: Alice Smith
+Age: 34 years
+Sex: female
+
+COMPREHENSIVE METABOLIC PANEL
+Glucose: 142 mg/dL
+Creatinine: 1.4 mg/dL
+Sodium: 138 mEq/L
+Potassium: 4.2 mEq/L
+
+HEMOGLOBIN A1C
+HbA1c: 7.2 %
+
+COMPLETE BLOOD COUNT
+CBC WBC: 14.2 K/uL
+Hemoglobin: 11.8 g/dL
+Platelets: 210 K/uL
+
+Lactate: 2.4 mmol/L
+
+Clinical note: Patient reports fatigue and increased thirst. Follow up with primary care.

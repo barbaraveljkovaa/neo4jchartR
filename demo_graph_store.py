@@ -210,8 +210,8 @@ PATIENT_META: dict[str, dict[str, Any]] = {
 
 # Clinical states from sepsis_data.py (attach-to-seed mode)
 CLINICAL_STATES: dict[str, dict[str, Any]] = {
-    "P1": {"sofa_score": 10, "map": 58, "gcs": 10, "creatinine": 2.1, "lactate": 3.2, "antibiotics_active": True, "vasopressors_active": True, "cultures_ordered": True},
-    "P2": {"sofa_score": 12, "map": 52, "gcs": 8, "creatinine": 2.8, "lactate": 4.1, "antibiotics_active": True, "vasopressors_active": True, "cultures_ordered": True},
+    "P1": {"sofa_score": 10, "map": 58, "gcs": 10, "creatinine": 2.1, "lactate": 3.2, "antibiotics_active": True, "vasopressors_active": True, "cultures_ordered": False},
+    "P2": {"sofa_score": 12, "map": 52, "gcs": 8, "creatinine": 2.8, "lactate": 4.1, "antibiotics_active": False, "vasopressors_active": True, "cultures_ordered": True},
     "P3": {"sofa_score": 9, "map": 55, "gcs": 12, "creatinine": 1.9, "lactate": 2.8, "antibiotics_active": False, "vasopressors_active": False, "cultures_ordered": True},
     "P4": {"sofa_score": 11, "map": 50, "gcs": 7, "creatinine": 3.2, "lactate": 5.0, "antibiotics_active": True, "vasopressors_active": True, "cultures_ordered": True},
     "P5": {"sofa_score": 8, "map": 60, "gcs": 11, "creatinine": 1.8, "lactate": 2.5, "antibiotics_active": True, "vasopressors_active": False, "cultures_ordered": False},
@@ -236,12 +236,169 @@ INITIAL_NOTES: dict[str, list[dict[str, str]]] = {
     "P1": [
         {"id": "N1", "text": "BP elevated at visit; started on lifestyle advice.", "date": "2024-01-10"},
         {"id": "N2", "text": "BP improved. Continue current medication.", "date": "2024-02-15"},
+        {"id": "N_P1_ED", "text": "ED: fever, headache, MAP 58. Sepsis bundle initiated; vasopressors started.", "date": "2024-06-14"},
+        {"id": "N_P1_ICU", "text": "ICU day 1: AKI (Cr 2.1), lactate 3.2 trending down. Cultures pending.", "date": "2024-06-15"},
     ],
-    "P2": [{"id": "N3", "text": "HbA1c 7.2%; discuss metformin adherence.", "date": "2024-04-01"}],
+    "P2": [
+        {"id": "N3", "text": "HbA1c 7.2%; discuss metformin adherence.", "date": "2024-04-01"},
+        {"id": "N_P2_ED", "text": "Brought in confused, hypotensive. Glucose 245. SOFA 12 — sepsis alert triggered.", "date": "2024-06-16"},
+        {"id": "N_P2_ENDO", "text": "Endocrine consult: T2DM on metformin; insulin sliding scale while NPO in ICU.", "date": "2024-06-17"},
+    ],
+    "P3": [
+        {"id": "N_P3_1", "text": "Asthma exacerbation with wheezing and fever. Peak flow 55% predicted.", "date": "2024-06-10"},
+        {"id": "N_P3_2", "text": "SOFA 9 — antibiotics not yet given. Pulmonology recommends empiric coverage.", "date": "2024-06-11"},
+    ],
     "P5": [{"id": "N4", "text": "Patient reports difficulty with metformin; considering alternative.", "date": "2024-05-20"}],
     "P6": [{"id": "N5", "text": "Asthma control suboptimal; step up ICS.", "date": "2024-03-12"}],
     "P10": [{"id": "N6", "text": "Diabetes follow-up; insulin added due to persistent elevation.", "date": "2024-06-01"}],
 }
+
+# Reported symptoms per patient (aligned with diseases, appointments, and sepsis clinical states).
+PATIENT_SYMPTOMS: dict[str, list[str]] = {
+    "P1": ["Headache", "Elevated blood pressure", "Hypotension", "Fever"],
+    "P2": ["Polyuria", "Fatigue", "Hypotension", "Altered mental status"],
+    "P3": ["Wheezing", "Shortness of breath", "Fever"],
+    "P4": ["Polyuria", "Elevated blood pressure", "Hypotension", "Confusion"],
+    "P5": ["Increased thirst", "Blurred vision", "Fatigue"],
+    "P6": ["Wheezing", "Chest tightness", "Hypotension", "Fever"],
+    "P7": ["Insomnia", "Palpitations", "Restlessness"],
+    "P8": ["Knee pain", "Headache", "Hypotension", "Fever"],
+    "P9": ["Restlessness", "Insomnia", "Anxiety"],
+    "P10": ["Polyuria", "Fatigue", "Fever"],
+    "P11": ["Headache", "Elevated blood pressure"],
+    "P12": ["Fever", "Productive cough", "Hypoxia"],
+    "P13": ["Fatigue", "Pallor", "Weakness"],
+    "P14": ["Chronic dyspnea", "Wheezing", "Productive cough"],
+    "P15": ["Breathing difficulty", "Wheezing", "Chest tightness"],
+    "P16": ["Polyuria", "Weight loss", "Fatigue"],
+    "P17": ["Shortness of breath", "Cough", "Wheezing"],
+    "P18": ["Elevated blood pressure", "Dizziness"],
+    "P19": ["Joint stiffness", "Knee pain"],
+    "P20": ["Insomnia", "Anxiety", "Fatigue"],
+}
+
+# Rich encounters and labs for clinician-demo patients (P1–P3).
+PATIENT_CLINICIAN_DETAILS: dict[str, dict[str, Any]] = {
+    "P1": {
+        "encounters": [
+            {
+                "id": "E_P1_ED",
+                "date": "2024-06-14",
+                "type": "Emergency",
+                "notes": "Hypertension history; acute fever, headache, hypotension. Sepsis workup started.",
+                "doctor_id": "DOC1",
+            },
+            {
+                "id": "E_P1_ICU",
+                "date": "2024-06-15",
+                "type": "Inpatient ICU",
+                "notes": "SOFA 10, on norepinephrine. AKI improving. Repeat lactate ordered.",
+                "doctor_id": "DOC1",
+            },
+        ],
+        "labs": [
+            {"id": "L_P1_BP", "encounter_id": "E_P1_ED", "name": "Blood pressure", "result_value": "168/92", "unit": "mmHg", "normal_range": "<140/90", "date": "2024-06-14"},
+            {"id": "L_P1_LAC", "encounter_id": "E_P1_ED", "name": "Lactate", "result_value": "3.2", "unit": "mmol/L", "normal_range": "<2.0", "date": "2024-06-14"},
+            {"id": "L_P1_CR", "encounter_id": "E_P1_ICU", "name": "Creatinine", "result_value": "2.1", "unit": "mg/dL", "normal_range": "0.6-1.2", "date": "2024-06-15"},
+            {"id": "L_P1_CBC", "encounter_id": "E_P1_ED", "name": "CBC WBC", "result_value": "14.2", "unit": "K/uL", "normal_range": "4-11", "date": "2024-06-14"},
+        ],
+    },
+    "P2": {
+        "encounters": [
+            {
+                "id": "E_P2_ED",
+                "date": "2024-06-16",
+                "type": "Emergency",
+                "notes": "Type 2 diabetes; altered mental status, MAP 52. High lactate — concern for septic shock.",
+                "doctor_id": "DOC3",
+            },
+            {
+                "id": "E_P2_ICU",
+                "date": "2024-06-17",
+                "type": "Inpatient ICU",
+                "notes": "SOFA 12. Vasopressors running; antibiotics not yet documented — bundle gap.",
+                "doctor_id": "DOC3",
+            },
+        ],
+        "labs": [
+            {"id": "L_P2_HBA1C", "encounter_id": "E_P2_ED", "name": "HbA1c", "result_value": "7.2", "unit": "%", "normal_range": "4-6", "date": "2024-06-16"},
+            {"id": "L_P2_GLUC", "encounter_id": "E_P2_ED", "name": "Glucose", "result_value": "245", "unit": "mg/dL", "normal_range": "70-100", "date": "2024-06-16"},
+            {"id": "L_P2_LAC", "encounter_id": "E_P2_ED", "name": "Lactate", "result_value": "4.1", "unit": "mmol/L", "normal_range": "<2.0", "date": "2024-06-16"},
+            {"id": "L_P2_CR", "encounter_id": "E_P2_ICU", "name": "Creatinine", "result_value": "2.8", "unit": "mg/dL", "normal_range": "0.6-1.2", "date": "2024-06-17"},
+        ],
+    },
+    "P3": {
+        "encounters": [
+            {
+                "id": "E_P3_ED",
+                "date": "2024-06-10",
+                "type": "Emergency",
+                "notes": "Asthma exacerbation with wheezing and fever. SpO2 91% on room air.",
+                "doctor_id": "DOC4",
+            },
+            {
+                "id": "E_P3_WARD",
+                "date": "2024-06-11",
+                "type": "Inpatient",
+                "notes": "SOFA 9, lactate elevated. Nebulizers given; antibiotics still pending.",
+                "doctor_id": "DOC4",
+            },
+        ],
+        "labs": [
+            {"id": "L_P3_PF", "encounter_id": "E_P3_ED", "name": "Peak flow", "result_value": "55", "unit": "% predicted", "normal_range": ">80", "date": "2024-06-10"},
+            {"id": "L_P3_WBC", "encounter_id": "E_P3_ED", "name": "CBC WBC", "result_value": "12.8", "unit": "K/uL", "normal_range": "4-11", "date": "2024-06-10"},
+            {"id": "L_P3_LAC", "encounter_id": "E_P3_WARD", "name": "Lactate", "result_value": "2.8", "unit": "mmol/L", "normal_range": "<2.0", "date": "2024-06-11"},
+        ],
+        "uploaded_procedures": [
+            {
+                "id": "PROC_UP_ct_chest",
+                "name": "CT chest",
+                "findings": "Patchy ground-glass opacities in the right lower lobe. Small pleural effusion. Impression: findings consistent with early pneumonia.",
+                "date": "2024-06-10",
+                "encounter_id": "E_P3_ED",
+            },
+        ],
+    },
+    "P12": {
+        "encounters": [
+            {
+                "id": "E_P12_ED",
+                "date": "2024-04-14",
+                "type": "Emergency",
+                "notes": "Cough and fever; hypoxia on room air. Pneumonia workup.",
+                "doctor_id": "DOC6",
+            },
+        ],
+        "labs": [
+            {"id": "L_P12_WBC", "encounter_id": "E_P12_ED", "name": "CBC WBC", "result_value": "15.1", "unit": "K/uL", "normal_range": "4-11", "date": "2024-04-14"},
+            {"id": "L_P12_LAC", "encounter_id": "E_P12_ED", "name": "Lactate", "result_value": "2.3", "unit": "mmol/L", "normal_range": "<2.0", "date": "2024-04-14"},
+        ],
+        "uploaded_procedures": [
+            {
+                "id": "PROC_UP_ct_chest_p12",
+                "name": "CT chest with contrast",
+                "findings": "Right lower lobe consolidation with air bronchograms. No pulmonary embolism.",
+                "date": "2024-04-14",
+                "encounter_id": "E_P12_ED",
+            },
+        ],
+    },
+}
+
+
+def _symptom_entries(names: list[str]) -> list[dict[str, str]]:
+    out: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for symptom in names:
+        name = (symptom or "").strip()
+        if not name:
+            continue
+        sym_id = "SYM_" + "".join(c if c.isalnum() else "_" for c in name.lower())[:48]
+        if sym_id in seen:
+            continue
+        seen.add(sym_id)
+        out.append({"id": sym_id, "name": name})
+    return out
 
 SEPSIS_GUIDELINE: dict[str, Any] = {
     "guideline_id": "SEPSIS_1",
@@ -285,6 +442,13 @@ class DemoGraphStore:
                     diseases.append({"id": did, "name": d["name"], "icd10": d["icd10"], "diagnosed_on": diagnosed_on})
             doc_ids = [doc for p, doc in VISITS if p == pid]
             primary_doc = doc_ids[0] if doc_ids else None
+            details = PATIENT_CLINICIAN_DETAILS.get(pid, {})
+            uploaded_procs = copy.deepcopy(details.get("uploaded_procedures", []))
+            proc_ids = list(PATIENT_PROCEDURES.get(pid, []))
+            for up in uploaded_procs:
+                up_id = up.get("id")
+                if up_id and up_id not in proc_ids:
+                    proc_ids.append(up_id)
             self.patients[pid] = {
                 "patient_id": pid,
                 "name": meta["name"],
@@ -292,15 +456,20 @@ class DemoGraphStore:
                 "sex": meta["sex"],
                 "source": "demo",
                 "diseases": diseases,
-                "symptoms": [],
+                "symptoms": _symptom_entries(PATIENT_SYMPTOMS.get(pid, [])),
                 "drug_ids": list(PATIENT_DRUGS.get(pid, [])),
-                "procedure_ids": list(PATIENT_PROCEDURES.get(pid, [])),
+                "procedure_ids": proc_ids,
                 "clinical_state": copy.deepcopy(CLINICAL_STATES.get(pid)),
                 "doctor_id": primary_doc,
                 "notes": copy.deepcopy(INITIAL_NOTES.get(pid, [])),
                 "appointments": _appointments_for_patient(pid),
+                "encounters": copy.deepcopy(details.get("encounters", [])),
+                "labs": copy.deepcopy(details.get("labs", [])),
+                "uploaded_procedures": uploaded_procs,
             }
         self.violations = {}
+        self._violations_synced = False
+        self._upload_seq = 100
 
     def patient_ids(self) -> frozenset[str]:
         return frozenset(self.patients.keys())
@@ -488,8 +657,6 @@ class DemoGraphStore:
         if not p:
             return []
         doc = DOCTORS.get(p.get("doctor_id") or "", {})
-        drug_id = (p.get("drug_ids") or ["DRUG1"])[0]
-        proc_id = (p.get("procedure_ids") or ["PROC1"])[0]
         base = {
             "patient_id": patient_id,
             "patient_name": p["name"],
@@ -509,6 +676,62 @@ class DemoGraphStore:
                     "hospital_name": a["hospital_name"],
                 }
             )
+        encounters = p.get("encounters") or []
+        labs_by_enc = {}
+        for lab in p.get("labs") or []:
+            eid = lab.get("encounter_id")
+            if eid:
+                labs_by_enc.setdefault(eid, []).append(lab)
+        drug_id = (p.get("drug_ids") or ["DRUG1"])[0]
+        proc_id = (p.get("procedure_ids") or ["PROC1"])[0]
+        if encounters:
+            for enc in encounters:
+                eid = enc["id"]
+                enc_doc = DOCTORS.get(enc.get("doctor_id") or p.get("doctor_id") or "", doc)
+                enc_labs = labs_by_enc.get(eid) or []
+                if enc_labs:
+                    for lab in enc_labs:
+                        rows.append(
+                            {
+                                **base,
+                                "encounter_id": eid,
+                                "encounter_date": enc.get("date"),
+                                "encounter_type": enc.get("type"),
+                                "encounter_notes": enc.get("notes") or "",
+                                "doctor_name": enc_doc.get("name", "Dr. Patel"),
+                                "lab_id": lab["id"],
+                                "lab_name": lab["name"],
+                                "lab_result_value": lab.get("result_value"),
+                                "lab_unit": lab.get("unit"),
+                                "lab_date": lab.get("date"),
+                                "drug_id": drug_id,
+                                "drug_name": DRUGS.get(drug_id, drug_id),
+                                "prescribed_on": enc.get("date"),
+                                "dose": "500mg",
+                                "procedure_id": proc_id,
+                                "procedure_name": PROCEDURES.get(proc_id, proc_id),
+                                "procedure_date": enc.get("date"),
+                            }
+                        )
+                else:
+                    rows.append(
+                        {
+                            **base,
+                            "encounter_id": eid,
+                            "encounter_date": enc.get("date"),
+                            "encounter_type": enc.get("type"),
+                            "encounter_notes": enc.get("notes") or "",
+                            "doctor_name": enc_doc.get("name", "Dr. Patel"),
+                            "drug_id": drug_id,
+                            "drug_name": DRUGS.get(drug_id, drug_id),
+                            "prescribed_on": enc.get("date"),
+                            "dose": "500mg",
+                            "procedure_id": proc_id,
+                            "procedure_name": PROCEDURES.get(proc_id, proc_id),
+                            "procedure_date": enc.get("date"),
+                        }
+                    )
+            return rows
         rows.append(
             {
                 **base,
@@ -619,6 +842,15 @@ class DemoGraphStore:
                 count += 1
         return count
 
+    def _ensure_violations_synced(self) -> None:
+        if self._violations_synced:
+            return
+        try:
+            self.sync_violations()
+        except Exception:
+            pass
+        self._violations_synced = True
+
     def _apply_extracted_data(self, pid: str, data: dict) -> None:
         p = self.patients[pid]
         for symptom in data.get("symptoms") or []:
@@ -647,6 +879,74 @@ class DemoGraphStore:
             cs.setdefault("vasopressors_active", False)
             cs.setdefault("cultures_ordered", True)
             p["clinical_state"] = cs
+        self._apply_uploaded_results(pid, data)
+
+    def _procedure_display(self, p: dict[str, Any], proc_id: str) -> tuple[str, dict[str, Any]]:
+        up = next((x for x in p.get("uploaded_procedures") or [] if x.get("id") == proc_id), None)
+        if up:
+            props = {"id": proc_id, "name": up.get("name") or proc_id}
+            if up.get("findings"):
+                props["findings"] = up["findings"]
+            if up.get("date"):
+                props["date"] = up["date"]
+            return up.get("name") or proc_id, props
+        name = PROCEDURES.get(proc_id, proc_id)
+        return name, {"id": proc_id, "name": name}
+
+    def _apply_uploaded_results(self, pid: str, data: dict) -> None:
+        labs = data.get("lab_results") or []
+        imaging = data.get("imaging_studies") or []
+        if not labs and not imaging:
+            return
+        p = self.patients[pid]
+        self._upload_seq += 1
+        enc_id = f"E_{pid}_UP_{self._upload_seq}"
+        today = date.today().isoformat()
+        enc = {
+            "id": enc_id,
+            "date": today,
+            "type": "Patient upload",
+            "notes": "Lab or imaging results uploaded from patient portal.",
+            "doctor_id": p.get("doctor_id"),
+        }
+        p.setdefault("encounters", []).append(enc)
+
+        for lab in labs:
+            if not isinstance(lab, dict):
+                continue
+            name = (lab.get("name") or "Lab").strip()
+            if not name:
+                continue
+            lab_id = "L_" + pid + "_UP_" + "".join(c if c.isalnum() else "_" for c in name.lower())[:32]
+            entry = {
+                "id": lab_id,
+                "encounter_id": enc_id,
+                "name": name,
+                "result_value": str(lab.get("result_value") or ""),
+                "unit": lab.get("unit") or "",
+                "normal_range": lab.get("normal_range") or "",
+                "date": lab.get("date") or today,
+            }
+            if not any(x.get("id") == lab_id for x in p.get("labs") or []):
+                p.setdefault("labs", []).append(entry)
+
+        for img in imaging:
+            if not isinstance(img, dict):
+                continue
+            name = (img.get("name") or img.get("modality") or "Imaging study").strip()
+            proc_id = "PROC_UP_" + "".join(c if c.isalnum() else "_" for c in name.lower())[:40]
+            meta = {
+                "id": proc_id,
+                "name": name,
+                "findings": (img.get("findings") or img.get("impression") or "").strip(),
+                "date": img.get("date") or today,
+                "encounter_id": enc_id,
+            }
+            existing = p.setdefault("uploaded_procedures", [])
+            if not any(x.get("id") == proc_id for x in existing):
+                existing.append(meta)
+            if proc_id not in p.get("procedure_ids", []):
+                p.setdefault("procedure_ids", []).append(proc_id)
 
     def create_patient_from_document(self, data: dict) -> dict:
         pid = self.next_patient_id()
@@ -665,6 +965,9 @@ class DemoGraphStore:
             "doctor_id": None,
             "notes": [],
             "appointments": [],
+            "encounters": [],
+            "labs": [],
+            "uploaded_procedures": [],
         }
         self._apply_extracted_data(pid, data)
         note_text = self._build_document_note_text(data)
@@ -681,6 +984,8 @@ class DemoGraphStore:
             "symptoms": data.get("symptoms") or [],
             "diseases": data.get("diseases") or [],
             "clinical_values": data.get("clinical_values") or {},
+            "lab_results": data.get("lab_results") or [],
+            "imaging_studies": data.get("imaging_studies") or [],
             "note_id": note_id,
             "note_text": note_text,
             "mode": "create",
@@ -709,6 +1014,8 @@ class DemoGraphStore:
             "symptoms": data.get("symptoms") or [],
             "diseases": data.get("diseases") or [],
             "clinical_values": data.get("clinical_values") or {},
+            "lab_results": data.get("lab_results") or [],
+            "imaging_studies": data.get("imaging_studies") or [],
             "note_id": note_id,
             "note_text": note_text,
             "mode": "append",
@@ -723,6 +1030,24 @@ class DemoGraphStore:
             parts.append("Diagnoses noted: " + ", ".join(data["diseases"]) + ".")
         if data.get("symptoms"):
             parts.append("Symptoms noted: " + ", ".join(data["symptoms"]) + ".")
+        labs = data.get("lab_results") or []
+        if labs:
+            parts.append(
+                "Lab results: "
+                + ", ".join(f"{x.get('name')} {x.get('result_value')}{x.get('unit') or ''}".strip() for x in labs)
+                + "."
+            )
+        imaging = data.get("imaging_studies") or []
+        if imaging:
+            parts.append(
+                "Imaging: "
+                + "; ".join(
+                    (x.get("name") or "Study")
+                    + (f" — {x['findings']}" if x.get("findings") else "")
+                    for x in imaging
+                )
+                + "."
+            )
         clinical = data.get("clinical_values") or {}
         if clinical:
             parts.append("Clinical values: " + ", ".join(f"{k}={v}" for k, v in clinical.items()) + ".")
@@ -731,6 +1056,7 @@ class DemoGraphStore:
         return " ".join(parts)
 
     def collect_patient_scoped_graph_rows(self, patient_id: str) -> list[dict[str, Any]]:
+        self._ensure_violations_synced()
         pid = (patient_id or "").strip()
         p = self.patients.get(pid)
         if not p:
@@ -819,7 +1145,22 @@ class DemoGraphStore:
         for drug_id in p.get("drug_ids") or []:
             rows.append(_row(pn, _nid("Drug", drug_id), "TREATED_WITH", "Patient", "Drug", prow, {"id": drug_id, "name": DRUGS.get(drug_id, drug_id)}))
         for proc_id in p.get("procedure_ids") or []:
-            rows.append(_row(pn, _nid("Procedure", proc_id), "HAD_PROCEDURE", "Patient", "Procedure", prow, {"id": proc_id, "name": PROCEDURES.get(proc_id, proc_id)}))
+            pname, pprops = self._procedure_display(p, proc_id)
+            rows.append(_row(pn, _nid("Procedure", proc_id), "HAD_PROCEDURE", "Patient", "Procedure", prow, pprops))
+            up = next((x for x in p.get("uploaded_procedures") or [] if x.get("id") == proc_id), None)
+            if up and up.get("encounter_id"):
+                en = _nid("Encounter", up["encounter_id"])
+                rows.append(
+                    _row(
+                        en,
+                        _nid("Procedure", proc_id),
+                        "INCLUDES_PROCEDURE",
+                        "Encounter",
+                        "Procedure",
+                        {"id": up["encounter_id"]},
+                        pprops,
+                    )
+                )
 
         for v in self.violations.get(pid) or []:
             vn = _nid("Violation", v["id"])
@@ -833,9 +1174,11 @@ class DemoGraphStore:
                     prow,
                     {
                         "id": v["id"],
+                        "name": (v.get("description") or v["id"])[:120],
                         "description": v.get("description"),
                         "source": v.get("source"),
                         "severity": v.get("severity"),
+                        "reason": v.get("reason"),
                     },
                 )
             )
@@ -853,6 +1196,44 @@ class DemoGraphStore:
                     {"id": note["id"], "text": note.get("text"), "date": note.get("date")},
                 )
             )
+
+        for enc in p.get("encounters") or []:
+            eid = enc["id"]
+            en = _nid("Encounter", eid)
+            eprops = {
+                "id": eid,
+                "date": enc.get("date"),
+                "type": enc.get("type"),
+                "notes": enc.get("notes"),
+            }
+            rows.append(_row(pn, en, "HAS_ENCOUNTER", "Patient", "Encounter", prow, eprops))
+            enc_doc_id = enc.get("doctor_id") or p.get("doctor_id")
+            if enc_doc_id and enc_doc_id in DOCTORS:
+                edoc = DOCTORS[enc_doc_id]
+                rows.append(
+                    _row(
+                        en,
+                        _nid("Doctor", enc_doc_id),
+                        "PERFORMED_BY",
+                        "Encounter",
+                        "Doctor",
+                        eprops,
+                        {"id": enc_doc_id, "name": edoc["name"], "specialty": edoc["specialty"]},
+                    )
+                )
+            for lab in p.get("labs") or []:
+                if lab.get("encounter_id") != eid:
+                    continue
+                ln = _nid("Lab", lab["id"])
+                lprops = {
+                    "id": lab["id"],
+                    "name": lab["name"],
+                    "result_value": lab.get("result_value"),
+                    "unit": lab.get("unit"),
+                    "normal_range": lab.get("normal_range"),
+                    "date": lab.get("date"),
+                }
+                rows.append(_row(en, ln, "ORDERED_LAB", "Encounter", "Lab", eprops, lprops))
 
         return rows
 
@@ -887,6 +1268,7 @@ class DemoGraphStore:
             "age": p["age"],
             "sex": p["sex"],
             "diseases": [{"id": d["id"], "name": d["name"]} for d in p["diseases"]],
+            "symptoms": [{"id": s["id"], "name": s["name"]} for s in p.get("symptoms") or []],
             "clinical_state": self.get_patient_clinical_state(pid) or {},
             "encounters": encounters,
             "labs": labs,

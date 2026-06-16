@@ -4,6 +4,8 @@ Calls run_compliance_check() dynamically; no hard-coded compliance data.
 Generates compliance_dashboard.html with collapsible sidebar, enhanced tooltips, and filters.
 Keep neo4j_ops, ai_compliance, api unchanged; this module only reads from them.
 """
+
+from __future__ import annotations
 import json
 import re
 import subprocess
@@ -902,8 +904,11 @@ def _sidebar_and_script(stats: dict, explanations: dict) -> str:
   .psc-clinical-summary { font-size: 0.8125rem; color: #334155; line-height: 1.55; margin: 0 0 0.625rem;
     padding: 0.5rem 0.625rem; background: linear-gradient(135deg, #EEF2FF 0%, #F8F9FF 100%);
     border-left: 3px solid var(--cv-primary); border-radius: 0 10px 10px 0; font-style: italic; }
-  .psc-violation-block { margin-bottom: 0.4rem; }
+  .psc-violation-block { margin-bottom: 0.55rem; padding-bottom: 0.45rem; border-bottom: 1px solid #f1f5f9; }
+  .psc-violation-block:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
   .psc-violation-reason { font-size: 0.65rem; color: #64748b; margin: 0.2rem 0 0; line-height: 1.4; }
+  .psc-violation-why { font-size: 0.6875rem; color: #475569; margin: 0.35rem 0 0; line-height: 1.45; }
+  .psc-violation-why-label { font-size: 0.625rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.04em; display: block; margin-bottom: 0.15rem; }
 
   /* ===== INSIGHT PANEL ===== */
   .insight-panel { display: none; }
@@ -1482,7 +1487,8 @@ def _sidebar_and_script(stats: dict, explanations: dict) -> str:
       <div id="uploadDropzone" class="upload-dropzone">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
         <p>Drag &amp; drop a medical document here</p>
-        <p class="hint">PDF or text file &mdash; or click to browse</p>
+        <p class="hint">PDF or text — lab reports, blood tests, CT/MRI reports, discharge summaries</p>
+        <p class="hint" style="margin-top:0.35rem;font-size:0.7rem;">Demo samples: <code>data/sample_blood_test.txt</code>, <code>data/sample_ct_chest.txt</code></p>
         <input type="file" id="uploadFileInput" class="upload-file-input" accept=".pdf,.txt,.text,.md" onchange="handleFileSelect(this.files[0])">
       </div>
       <div id="uploadLoading" class="upload-loading" style="display:none;">
@@ -4208,10 +4214,10 @@ def _sidebar_and_script(stats: dict, explanations: dict) -> str:
       if (bannerEl) {
         bannerEl.style.display = 'block';
         bannerEl.textContent = (forPatient ? 'Your recent visit document will be added to ' : 'This document will be added to ')
-          + pname + ' (' + pid + '). New diagnoses, symptoms, and notes from the file will appear on the graph.';
+          + pname + ' (' + pid + '). New labs, imaging, diagnoses, symptoms, and notes will appear on the graph.';
       }
       if (btn) btn.textContent = forPatient ? 'Add to my chart' : 'Add to patient chart';
-      if (dropHint) dropHint.textContent = 'PDF or text from a recent visit — discharge summary, lab report, etc.';
+      if (dropHint) dropHint.textContent = 'PDF or text — blood test results, CT/MRI reports, visit summaries, etc.';
     } else {
       if (titleEl) titleEl.textContent = 'Import new patient from document';
       if (bannerEl) { bannerEl.style.display = 'none'; bannerEl.textContent = ''; }
@@ -4311,7 +4317,28 @@ def _sidebar_and_script(stats: dict, explanations: dict) -> str:
       });
       html += '</div>';
     }
-    if (!(data.symptoms || []).length && !(data.diseases || []).length && !keys.length) {
+    if (data.lab_results && data.lab_results.length) {
+      html += '<h4>Blood tests / Labs (' + data.lab_results.length + ')</h4><div class="clinical-grid">';
+      data.lab_results.forEach(function(lab) {
+        html += '<div class="clinical-item"><div class="cv-label">' + (lab.name || 'Lab') + '</div><div class="cv-value">'
+          + (lab.result_value || '—') + (lab.unit ? ' ' + lab.unit : '')
+          + (lab.normal_range ? ' <span style="font-size:0.65rem;color:#94a3b8;">(ref ' + lab.normal_range + ')</span>' : '')
+          + '</div></div>';
+      });
+      html += '</div>';
+    }
+    if (data.imaging_studies && data.imaging_studies.length) {
+      html += '<h4>Imaging / CT scans (' + data.imaging_studies.length + ')</h4><div class="tag-list">';
+      data.imaging_studies.forEach(function(img) {
+        var label = (img.name || img.modality || 'Imaging');
+        if (img.findings) label += ': ' + img.findings;
+        html += '<span class="tag disease">' + label + '</span>';
+      });
+      html += '</div>';
+    }
+    var hasLabs = (data.lab_results || []).length > 0;
+    var hasImaging = (data.imaging_studies || []).length > 0;
+    if (!(data.symptoms || []).length && !(data.diseases || []).length && !keys.length && !hasLabs && !hasImaging) {
       html += '<p style="color:#94a3b8;text-align:center;padding:1rem 0;">No medical data could be extracted. Try a different document.</p>';
     }
     document.getElementById('uploadPreview').innerHTML = html;
@@ -5724,11 +5751,7 @@ def _sidebar_and_script(stats: dict, explanations: dict) -> str:
       if (n.node_type === 'Disease') diseases.push(_pscNodeName(n));
       else if (n.node_type === 'Symptom') symptoms.push(_pscNodeName(n));
       else if (n.node_type === 'Violation') {
-        var sev = 'warning';
-        var t = n.title || '';
-        if (t.indexOf('critical') >= 0 || t.indexOf('Critical') >= 0) sev = 'critical';
-        else if (t.indexOf('normal') >= 0 || t.indexOf('Normal') >= 0 || t.indexOf('Compliant') >= 0) sev = 'normal';
-        violations.push({ text: _pscNodeName(n), severity: sev, title: t, reason: n.violation_reason || '' });
+        violations.push(_extractViolationFromNode(n));
       }
       else if (n.node_type === 'Drug') drugs.push(_pscNodeName(n));
       else if (n.node_type === 'ClinicalState') {
@@ -5780,6 +5803,40 @@ def _sidebar_and_script(stats: dict, explanations: dict) -> str:
       age: ageStr,
       sex: sexStr
     };
+  }
+
+  function _violationFallbackExplanation(text) {
+    var t = (text || '').toLowerCase();
+    if (t.indexOf('antibiotic') >= 0) return 'Broad-spectrum antibiotics should be started within 1 hour when sepsis is suspected to reduce mortality.';
+    if (t.indexOf('culture') >= 0) return 'Blood cultures before antibiotics help identify the infection source and guide targeted treatment.';
+    if (t.indexOf('lactate') >= 0) return 'Elevated lactate suggests tissue hypoperfusion; repeat levels and urgent source control are recommended.';
+    if (t.indexOf('map') >= 0 || t.indexOf('vasopressor') >= 0) return 'Mean arterial pressure below 65 mmHg may require fluids and vasopressors to restore organ perfusion.';
+    if (t.indexOf('drug') >= 0 || t.indexOf('medication') >= 0) return 'The prescribed medication does not match the evidence-based protocol for this diagnosis.';
+    if (t.indexOf('procedure') >= 0) return 'A recommended monitoring or diagnostic procedure from the care pathway was not documented.';
+    return 'This finding indicates a gap between documented care and the recommended clinical pathway for this patient.';
+  }
+  function _extractViolationFromNode(n) {
+    var sev = (n.violation_severity || 'warning').toLowerCase();
+    if (sev !== 'critical' && sev !== 'warning' && sev !== 'normal') sev = 'warning';
+    var t = n.title || '';
+    if (t.indexOf('CRITICAL') >= 0) sev = 'critical';
+    else if (t.indexOf('WARNING') >= 0 && sev === 'normal') sev = 'warning';
+    var reason = (n.violation_reason || '').trim();
+    if (!reason && t) {
+      var rm = t.match(/Reason:\\s*(.+?)(?:\\n|$)/);
+      if (rm) reason = rm[1].trim();
+    }
+    var text = (n.full_label || _pscNodeName(n) || '').trim();
+    if ((!text || /^V[_\\d]/i.test(text)) && t) {
+      var lines = t.split(String.fromCharCode(10)).map(function(x) { return x.trim(); }).filter(Boolean);
+      for (var i = 0; i < lines.length; i++) {
+        if (lines[i].indexOf('Violation') === 0 && lines[i + 1]) { text = lines[i + 1]; break; }
+        if (lines[i] && lines[i].indexOf('Reason:') !== 0 && lines[i].indexOf('PROTOCOL') !== 0 && lines[i].indexOf('Explains') !== 0) {
+          text = lines[i]; break;
+        }
+      }
+    }
+    return { text: text || 'Protocol violation', severity: sev, title: t, reason: reason };
   }
 
   function renderPatientSummary(pid) {
@@ -5869,8 +5926,9 @@ def _sidebar_and_script(stats: dict, explanations: dict) -> str:
     if (d.violations.length) {
       html += '<div class="psc-section"><p class="psc-section-label">Violations</p>';
       d.violations.forEach(function(v) {
-        html += '<div class="psc-violation-block"><span class="psc-tag violation-' + v.severity + '">' + v.text + '</span>';
-        if (v.reason) html += '<p class="psc-violation-reason">' + v.reason + '</p>';
+        html += '<div class="psc-violation-block"><span class="psc-tag violation-' + v.severity + '">' + _escHtml(v.text) + '</span>';
+        var explanation = (v.reason || '').trim() || _violationFallbackExplanation(v.text);
+        html += '<p class="psc-violation-why"><span class="psc-violation-why-label">Why it matters</span>' + _escHtml(explanation) + '</p>';
         html += '</div>';
       });
       html += '</div>';
@@ -5933,7 +5991,12 @@ def _sidebar_and_script(stats: dict, explanations: dict) -> str:
       reasons: ['Symptom: <span class="reason-val">hypotension</span> documented', c && c.map != null ? 'Current MAP reading: <span class="reason-val">' + c.map + ' mmHg</span>' : 'No current MAP reading available', 'Verify latest vitals and reassess fluid status'] });
     var critViolations = d.violations.filter(function(v) { return v.severity === 'critical'; });
     if (critViolations.length) {
-      var vReasons = critViolations.map(function(v) { return '<span class="reason-val">' + v.text + '</span>'; });
+      var vReasons = critViolations.map(function(v) {
+        var line = '<span class="reason-val">' + _escHtml(v.text) + '</span>';
+        var expl = (v.reason || '').trim() || _violationFallbackExplanation(v.text);
+        if (expl) line += ' — ' + _escHtml(expl);
+        return line;
+      });
       vReasons.push('Critical violations indicate missed mandatory protocol steps');
       insights.push({ icon: '\\u26d4', text: '<strong>' + critViolations.length + ' critical violation' + (critViolations.length > 1 ? 's' : '') + '</strong> &mdash; review protocol', cls: 'critical', reasons: vReasons });
     }

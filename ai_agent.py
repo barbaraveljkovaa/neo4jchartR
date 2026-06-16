@@ -37,6 +37,8 @@ Functionality:
 Uses neo4j_ops (run_query); no hard-coded data. Set OPENAI_API_KEY for LLM explanations.
 """
 
+from __future__ import annotations
+
 # Response keys required by the dashboard (do not remove)
 AGENT_RESPONSE_KEYS = (
     "answer",

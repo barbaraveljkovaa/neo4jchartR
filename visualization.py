@@ -4,6 +4,8 @@ Reuses neo4j_connect and ai_compliance; hover shows actual vs recommended treatm
 Run from terminal or VS Code: python3 visualization.py
 Output: compliance_graph.html (opens in browser).
 """
+
+from __future__ import annotations
 import webbrowser
 from pathlib import Path
 

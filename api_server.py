@@ -13,6 +13,8 @@ All graph data is retrieved through those modules; this API only orchestrates ca
 and returns JSON for the dashboard to display the answer and highlight the graph.
 """
 
+from __future__ import annotations
+
 from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -73,7 +75,19 @@ class ConfirmPatientRequest(BaseModel):
     symptoms: list[str] = []
     diseases: list[str] = []
     clinical_values: dict = {}
+    lab_results: list[dict] = []
+    imaging_studies: list[dict] = []
     document_summary: str | None = None
+
+
+def _has_extracted_medical_data(body: ConfirmPatientRequest) -> bool:
+    return bool(
+        body.symptoms
+        or body.diseases
+        or body.clinical_values
+        or body.lab_results
+        or body.imaging_studies
+    )
 
 
 class CompareRequest(BaseModel):
@@ -188,7 +202,7 @@ def confirm_patient_endpoint(body: ConfirmPatientRequest):
     ClinicalState) nodes in Neo4j.  Returns the created patient info.
     """
     _graph_demo_blocks_persisted_queries()
-    if not body.symptoms and not body.diseases and not body.clinical_values:
+    if not _has_extracted_medical_data(body):
         raise HTTPException(
             status_code=400,
             detail="No medical data to create — upload a document first.",
@@ -212,7 +226,7 @@ def append_document_endpoint(patient_id: str, body: ConfirmPatientRequest):
         raise HTTPException(status_code=400, detail="Patient id is required.")
     if not patient_exists(pid):
         raise HTTPException(status_code=404, detail=f"Patient not found: {pid}")
-    if not body.symptoms and not body.diseases and not body.clinical_values:
+    if not _has_extracted_medical_data(body):
         raise HTTPException(
             status_code=400,
             detail="No medical data to add — upload a document with extractable content.",
