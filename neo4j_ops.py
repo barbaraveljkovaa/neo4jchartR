@@ -6,7 +6,10 @@ Graph model:
                  HAS_ENCOUNTER, AT_HOSPITAL, INCLUDES_LAB, INCLUDES_PROCEDURE, PERFORMED_BY
   Properties: id, name, age, sex, specialty, date, diagnosed_on, icd10
 """
+
+from __future__ import annotations
 from neo4j_connect import run_query
+from neo4j_config import USE_GRAPH_DEMO
 
 
 # -------- Query (read) operations --------
@@ -14,6 +17,10 @@ from neo4j_connect import run_query
 
 def get_patients_with_diseases():
     """Retrieve all patients with their diseases (and optional diagnosed_on, icd10 on relationship)."""
+    if USE_GRAPH_DEMO:
+        from graph_demo_data import demo_get_patients_with_diseases
+
+        return demo_get_patients_with_diseases()
     cypher = """
     MATCH (p:Patient)
     OPTIONAL MATCH (p)-[r:HAS_DISEASE]->(d:Disease)
@@ -27,6 +34,10 @@ def get_patients_with_diseases():
 
 def get_doctors_and_specialties():
     """Retrieve all doctors and their specialties."""
+    if USE_GRAPH_DEMO:
+        from graph_demo_data import demo_get_doctors_and_specialties
+
+        return demo_get_doctors_and_specialties()
     cypher = """
     MATCH (d:Doctor)
     RETURN d.id AS doctor_id, d.name AS doctor_name, d.specialty AS specialty
@@ -48,6 +59,10 @@ def get_doctors_treating_diseases():
 
 def get_patient_appointments(patient_id: str):
     """Retrieve all appointments of a patient by patient id."""
+    if USE_GRAPH_DEMO:
+        from graph_demo_data import demo_get_patient_appointments
+
+        return demo_get_patient_appointments(patient_id)
     cypher = """
     MATCH (p:Patient {id: $patient_id})-[:HAS_APPOINTMENT]->(a:Appointment)
     RETURN a.id AS appointment_id, a.date AS appointment_date
@@ -58,6 +73,10 @@ def get_patient_appointments(patient_id: str):
 
 def get_hospitals_visited_by_patients():
     """Retrieve hospitals visited by patients (via appointments or encounters)."""
+    if USE_GRAPH_DEMO:
+        from graph_demo_data import demo_get_hospitals_visited_by_patients
+
+        return demo_get_hospitals_visited_by_patients()
     cypher = """
     MATCH (p:Patient)-[:HAS_APPOINTMENT]->(a:Appointment)-[:AT_HOSPITAL]->(h:Hospital)
     RETURN p.id AS patient_id, p.name AS patient_name,
@@ -192,6 +211,10 @@ def get_protocol_guidelines():
     Returns list of dicts with disease_id, disease_name, drug_id, drug_name, procedure_id, procedure_name,
     followup_id, followup_name.
     """
+    if USE_GRAPH_DEMO:
+        from graph_demo_data import demo_get_protocol_guidelines
+
+        return demo_get_protocol_guidelines()
     cypher = """
     MATCH (d:Disease)-[:RECOMMENDED_DRUG]->(drug:Drug)-[:RECOMMENDED_PROCEDURE]->(proc:Procedure)-[:FOLLOW_UP]->(f:FollowUp)
     RETURN d.id AS disease_id, d.name AS disease_name, d.icd10 AS disease_icd10,
@@ -205,6 +228,10 @@ def get_protocol_guidelines():
 
 def get_protocol_for_disease(disease_id: str):
     """Get the recommended drug, procedure, and follow-up for a single disease."""
+    if USE_GRAPH_DEMO:
+        from graph_demo_data import demo_get_protocol_for_disease
+
+        return demo_get_protocol_for_disease(disease_id)
     cypher = """
     MATCH (d:Disease {id: $disease_id})-[:RECOMMENDED_DRUG]->(drug:Drug)-[:RECOMMENDED_PROCEDURE]->(proc:Procedure)-[:FOLLOW_UP]->(f:FollowUp)
     RETURN d.id AS disease_id, d.name AS disease_name,
@@ -220,6 +247,10 @@ def get_actual_patient_treatments(patient_id: str, disease_id: str):
     Get actual treatments for a patient (for comparison with protocol for the given disease).
     Returns dict with lists actual_drug_ids, actual_drug_names, actual_procedure_ids, actual_procedure_names.
     """
+    if USE_GRAPH_DEMO:
+        from graph_demo_data import demo_get_actual_patient_treatments
+
+        return demo_get_actual_patient_treatments(patient_id, disease_id)
     cypher_drugs = """
     MATCH (p:Patient {id: $patient_id})-[:HAS_DISEASE]->(d:Disease {id: $disease_id})
     OPTIONAL MATCH (p)-[:TREATED_WITH]->(drug:Drug)
@@ -262,6 +293,10 @@ def create_had_procedure(patient_id: str, procedure_id: str):
 
 def get_patients_with_doctor():
     """Get each patient and the doctor they visit (for attributing compliance to doctors)."""
+    if USE_GRAPH_DEMO:
+        from graph_demo_data import demo_get_patients_with_doctor
+
+        return demo_get_patients_with_doctor()
     cypher = """
     MATCH (p:Patient)-[:VISITS]->(doc:Doctor)
     RETURN p.id AS patient_id, p.name AS patient_name, doc.id AS doctor_id, doc.name AS doctor_name
@@ -278,6 +313,10 @@ def get_patient_full_journey(patient_id: str):
     Get full treatment journey for a patient: appointments (with hospital), encounters (with doctor),
     labs (with results), procedures, and drugs (prescriptions). Ordered by date where available.
     """
+    if USE_GRAPH_DEMO:
+        from graph_demo_data import demo_get_patient_full_journey
+
+        return demo_get_patient_full_journey(patient_id)
     cypher = """
     MATCH (p:Patient {id: $patient_id})
     OPTIONAL MATCH (p)-[:HAS_APPOINTMENT]->(a:Appointment)-[:AT_HOSPITAL]->(h:Hospital)
@@ -391,6 +430,10 @@ def get_patient_notes(patient_id: str):
     Retrieve all PatientNote nodes linked to a patient via HAS_NOTE.
     Returns list of dicts with id, text, date.
     """
+    if USE_GRAPH_DEMO:
+        from graph_demo_data import demo_get_patient_notes
+
+        return demo_get_patient_notes(patient_id)
     cypher = """
     MATCH (p:Patient {id: $patient_id})-[:HAS_NOTE]->(n:PatientNote)
     RETURN n.id AS id, n.text AS text, n.date AS date
@@ -407,6 +450,10 @@ def get_patient_clinical_state(patient_id: str):
     Get current clinical state for a patient (HAS_CLINICAL_STATE -> ClinicalState).
     Returns single dict or None if not found.
     """
+    if USE_GRAPH_DEMO:
+        from graph_demo_data import demo_get_patient_clinical_state
+
+        return demo_get_patient_clinical_state(patient_id)
     cypher = """
     MATCH (p:Patient {id: $patient_id})-[:HAS_CLINICAL_STATE]->(c:ClinicalState)
     RETURN c.id AS state_id,
@@ -429,6 +476,10 @@ def get_patient_clinical_state(patient_id: str):
 
 def get_patients_with_clinical_state():
     """All patients that have a ClinicalState node (for sepsis dashboard)."""
+    if USE_GRAPH_DEMO:
+        from graph_demo_data import demo_get_patients_with_clinical_state
+
+        return demo_get_patients_with_clinical_state()
     cypher = """
     MATCH (p:Patient)-[:HAS_CLINICAL_STATE]->(c:ClinicalState)
     RETURN p.id AS patient_id, p.name AS patient_name, p.age AS patient_age, p.sex AS patient_sex,
@@ -441,6 +492,10 @@ def get_patients_with_clinical_state():
 
 def get_next_patient_id():
     """Get the next available patient ID (P<n+1>) based on existing patients."""
+    if USE_GRAPH_DEMO:
+        from graph_demo_data import demo_next_patient_id
+
+        return demo_next_patient_id()
     cypher = """
     MATCH (p:Patient)
     WITH p.id AS pid
@@ -461,31 +516,79 @@ def get_next_patient_id():
     return f"P{max_num + 1}"
 
 
-def create_patient_from_document(data: dict) -> dict:
-    """
-    Create a Patient node and related graph structure from document-extracted data.
+def patient_exists(patient_id: str) -> bool:
+    """Return True if a Patient with this id exists in the graph."""
+    pid = (patient_id or "").strip()
+    if not pid:
+        return False
+    if USE_GRAPH_DEMO:
+        from graph_demo_data import demo_patient_exists
 
-    Accepts:
-        patient_name, age, sex, symptoms (list[str]),
-        diseases (list[str]), clinical_values (dict)
-
-    Creates: Patient node, Symptom nodes + HAS_SYMPTOM, Disease links + HAS_DISEASE,
-    ClinicalState node + HAS_CLINICAL_STATE (when clinical values are present).
-
-    Returns dict with patient_id, patient_name and all created entities.
-    """
-    pid = get_next_patient_id()
-    name = data.get("patient_name") or f"Patient {pid}"
-    age = data.get("age")
-    sex = data.get("sex")
-
-    run_query(
-        "CREATE (p:Patient {id: $pid, name: $name, age: $age, sex: $sex, source: 'document_upload'})",
-        {"pid": pid, "name": name, "age": age, "sex": sex},
+        return demo_patient_exists(pid)
+    rows = run_query(
+        "MATCH (p:Patient {id: $pid}) RETURN p.id AS id LIMIT 1",
+        {"pid": pid},
     )
+    return bool(rows)
 
+
+def _next_note_id() -> str:
+    if USE_GRAPH_DEMO:
+        from graph_demo_data import demo_next_note_id
+
+        return demo_next_note_id()
+    rows = run_query("MATCH (n:PatientNote) RETURN n.id AS id")
+    max_num = 0
+    for r in rows:
+        nid = r.get("id") or ""
+        if nid.startswith("N") and nid[1:].isdigit():
+            max_num = max(max_num, int(nid[1:]))
+    return f"N{max_num + 1}"
+
+
+def _build_document_note_text(data: dict, document_summary: str | None = None) -> str:
+    if document_summary and document_summary.strip():
+        return document_summary.strip()
+    from datetime import date
+
+    parts = [f"Document uploaded on {date.today().isoformat()}."]
+    diseases = data.get("diseases") or []
+    symptoms = data.get("symptoms") or []
+    clinical = data.get("clinical_values") or {}
+    if diseases:
+        parts.append("Diagnoses noted: " + ", ".join(diseases) + ".")
+    if symptoms:
+        parts.append("Symptoms noted: " + ", ".join(symptoms) + ".")
+    labs = data.get("lab_results") or []
+    if labs:
+        parts.append(
+            "Lab results: "
+            + ", ".join(f"{x.get('name')} {x.get('result_value')}{x.get('unit') or ''}".strip() for x in labs)
+            + "."
+        )
+    imaging = data.get("imaging_studies") or []
+    if imaging:
+        parts.append(
+            "Imaging: "
+            + "; ".join(
+                (x.get("name") or "Study")
+                + (f" — {x['findings']}" if x.get("findings") else "")
+                for x in imaging
+            )
+            + "."
+        )
+    if clinical:
+        cv = ", ".join(f"{k}={v}" for k, v in clinical.items())
+        parts.append("Clinical values: " + cv + ".")
+    if len(parts) == 1:
+        parts.append("Visit or discharge summary added to the chart.")
+    return " ".join(parts)
+
+
+def _apply_extracted_data_to_patient(pid: str, data: dict) -> None:
+    """Merge symptoms, diseases, and optional clinical state onto an existing patient."""
     for symptom in data.get("symptoms") or []:
-        sym_id = "SYM_" + "".join(c if c.isalnum() else "_" for c in symptom.lower())
+        sym_id = "SYM_" + "".join(c if c.isalnum() else "_" for c in symptom.lower())[:48]
         run_query(
             "MERGE (s:Symptom {id: $sym_id}) SET s.name = $name "
             "WITH s MATCH (p:Patient {id: $pid}) MERGE (p)-[:HAS_SYMPTOM]->(s)",
@@ -505,7 +608,7 @@ def create_patient_from_document(data: dict) -> dict:
                 {"pid": pid, "did": existing[0]["disease_id"]},
             )
         else:
-            did = "D_" + "".join(c if c.isalnum() else "_" for c in disease_name)
+            did = "D_" + "".join(c if c.isalnum() else "_" for c in disease_name)[:40]
             run_query(
                 "MERGE (d:Disease {id: $did}) SET d.name = $name "
                 "WITH d MATCH (p:Patient {id: $pid}) MERGE (p)-[:HAS_DISEASE]->(d)",
@@ -514,10 +617,15 @@ def create_patient_from_document(data: dict) -> dict:
 
     clinical = data.get("clinical_values") or {}
     if clinical:
-        cs_id = f"CS_{pid}"
+        import time
+
+        cs_id = f"CS_{pid}_doc_{int(time.time())}"
         key_map = {
-            "MAP": "map", "SOFA": "sofa_score", "creatinine": "creatinine",
-            "GCS": "gcs", "lactate": "lactate",
+            "MAP": "map",
+            "SOFA": "sofa_score",
+            "creatinine": "creatinine",
+            "GCS": "gcs",
+            "lactate": "lactate",
         }
         set_parts = []
         params: dict = {"cs_id": cs_id, "pid": pid}
@@ -528,7 +636,7 @@ def create_patient_from_document(data: dict) -> dict:
                 set_parts.append(f"c.{neo_key} = ${neo_key}")
         for k, v in clinical.items():
             if k not in key_map and v is not None:
-                safe = "".join(c if c.isalnum() else "_" for c in k.lower())
+                safe = "".join(c if c.isalnum() else "_" for c in k.lower())[:32]
                 params[safe] = v
                 set_parts.append(f"c.{safe} = ${safe}")
         if set_parts:
@@ -539,6 +647,120 @@ def create_patient_from_document(data: dict) -> dict:
                 params,
             )
 
+    import time
+    from datetime import date
+
+    labs = data.get("lab_results") or []
+    imaging = data.get("imaging_studies") or []
+    if labs or imaging:
+        enc_id = f"E_{pid}_doc_{int(time.time())}"
+        run_query(
+            "CREATE (e:Encounter {id: $eid, date: $date, type: 'Patient upload', notes: $notes}) "
+            "WITH e MATCH (p:Patient {id: $pid}) CREATE (p)-[:HAS_ENCOUNTER]->(e)",
+            {
+                "eid": enc_id,
+                "date": date.today().isoformat(),
+                "notes": "Lab or imaging results uploaded from patient portal.",
+                "pid": pid,
+            },
+        )
+        for lab in labs:
+            if not isinstance(lab, dict):
+                continue
+            name = (lab.get("name") or "Lab").strip()
+            val = lab.get("result_value")
+            if not name or val is None:
+                continue
+            lab_id = "L_" + pid + "_UP_" + "".join(c if c.isalnum() else "_" for c in name.lower())[:32]
+            run_query(
+                "MERGE (l:Lab {id: $lid}) SET l.name = $name, l.result_value = $val, "
+                "l.unit = $unit, l.normal_range = $nr, l.date = $date "
+                "WITH l MATCH (e:Encounter {id: $eid}) CREATE (e)-[:ORDERED_LAB]->(l)",
+                {
+                    "lid": lab_id,
+                    "name": name,
+                    "val": str(val),
+                    "unit": lab.get("unit") or "",
+                    "nr": lab.get("normal_range") or "",
+                    "date": lab.get("date") or date.today().isoformat(),
+                    "eid": enc_id,
+                },
+            )
+        for img in imaging:
+            if not isinstance(img, dict):
+                continue
+            name = (img.get("name") or img.get("modality") or "Imaging study").strip()
+            if not name:
+                continue
+            proc_id = "PROC_UP_" + "".join(c if c.isalnum() else "_" for c in name.lower())[:40]
+            findings = (img.get("findings") or img.get("impression") or "").strip()
+            run_query(
+                "MERGE (pr:Procedure {id: $prid}) SET pr.name = $name, pr.findings = $findings, pr.date = $date "
+                "WITH pr MATCH (p:Patient {id: $pid}), (e:Encounter {id: $eid}) "
+                "MERGE (p)-[:HAD_PROCEDURE]->(pr) MERGE (e)-[:INCLUDES_PROCEDURE]->(pr)",
+                {
+                    "prid": proc_id,
+                    "name": name,
+                    "findings": findings,
+                    "date": img.get("date") or date.today().isoformat(),
+                    "pid": pid,
+                    "eid": enc_id,
+                },
+            )
+
+
+def append_document_to_patient(
+    patient_id: str, data: dict, document_summary: str | None = None
+) -> dict:
+    """
+    Add extracted document data to an existing patient (symptoms, diseases, clinical state, note).
+    Does not create a new Patient node.
+    """
+    if USE_GRAPH_DEMO:
+        from graph_demo_data import demo_append_document_to_patient
+
+        return demo_append_document_to_patient(patient_id, data, document_summary)
+    pid = (patient_id or "").strip()
+    if not patient_exists(pid):
+        raise ValueError(f"Patient not found: {pid}")
+
+    rows = run_query(
+        "MATCH (p:Patient {id: $pid}) RETURN p.name AS name, p.age AS age, p.sex AS sex LIMIT 1",
+        {"pid": pid},
+    )
+    existing = rows[0] if rows else {}
+    name = data.get("patient_name") or existing.get("name") or pid
+    age = data.get("age") if data.get("age") is not None else existing.get("age")
+    sex = data.get("sex") or existing.get("sex")
+
+    if data.get("age") is not None or data.get("sex"):
+        run_query(
+            "MATCH (p:Patient {id: $pid}) SET p.age = coalesce($age, p.age), p.sex = coalesce($sex, p.sex)",
+            {"pid": pid, "age": data.get("age"), "sex": data.get("sex")},
+        )
+    if data.get("patient_name"):
+        run_query(
+            "MATCH (p:Patient {id: $pid}) SET p.name = $name",
+            {"pid": pid, "name": name},
+        )
+
+    _apply_extracted_data_to_patient(pid, data)
+
+    from datetime import date
+
+    note_id = _next_note_id()
+    note_text = _build_document_note_text(data, document_summary)
+    run_query(
+        """
+        CREATE (n:PatientNote {id: $note_id, text: $text, date: $date, source: 'document_upload'})
+        WITH n
+        MATCH (p:Patient {id: $pid})
+        CREATE (p)-[:HAS_NOTE]->(n)
+        RETURN n.id AS note_id
+        """,
+        {"note_id": note_id, "text": note_text, "date": date.today().isoformat(), "pid": pid},
+    )
+
     return {
         "patient_id": pid,
         "patient_name": name,
@@ -546,12 +768,165 @@ def create_patient_from_document(data: dict) -> dict:
         "sex": sex,
         "symptoms": data.get("symptoms") or [],
         "diseases": data.get("diseases") or [],
+        "clinical_values": data.get("clinical_values") or {},
+        "lab_results": data.get("lab_results") or [],
+        "imaging_studies": data.get("imaging_studies") or [],
+        "note_id": note_id,
+        "note_text": note_text,
+        "mode": "append",
+    }
+
+
+def create_patient_from_document(data: dict) -> dict:
+    """
+    Create a Patient node and related graph structure from document-extracted data.
+
+    Accepts:
+        patient_name, age, sex, symptoms (list[str]),
+        diseases (list[str]), clinical_values (dict)
+
+    Creates: Patient node, Symptom nodes + HAS_SYMPTOM, Disease links + HAS_DISEASE,
+    ClinicalState node + HAS_CLINICAL_STATE (when clinical values are present).
+
+    Returns dict with patient_id, patient_name and all created entities.
+    """
+    if USE_GRAPH_DEMO:
+        from graph_demo_data import demo_create_patient_from_document
+
+        return demo_create_patient_from_document(data)
+    pid = get_next_patient_id()
+    name = data.get("patient_name") or f"Patient {pid}"
+    age = data.get("age")
+    sex = data.get("sex")
+
+    run_query(
+        "CREATE (p:Patient {id: $pid, name: $name, age: $age, sex: $sex, source: 'document_upload'})",
+        {"pid": pid, "name": name, "age": age, "sex": sex},
+    )
+
+    _apply_extracted_data_to_patient(pid, data)
+
+    clinical = data.get("clinical_values") or {}
+    result = {
+        "patient_id": pid,
+        "patient_name": name,
+        "age": age,
+        "sex": sex,
+        "symptoms": data.get("symptoms") or [],
+        "diseases": data.get("diseases") or [],
         "clinical_values": clinical,
+        "lab_results": data.get("lab_results") or [],
+        "imaging_studies": data.get("imaging_studies") or [],
+        "mode": "create",
+    }
+    note_text = _build_document_note_text(data)
+    if note_text:
+        from datetime import date
+
+        note_id = _next_note_id()
+        run_query(
+            """
+            CREATE (n:PatientNote {id: $note_id, text: $text, date: $date, source: 'document_upload'})
+            WITH n MATCH (p:Patient {id: $pid}) CREATE (p)-[:HAS_NOTE]->(n)
+            """,
+            {
+                "note_id": note_id,
+                "text": note_text,
+                "date": date.today().isoformat(),
+                "pid": pid,
+            },
+        )
+        result["note_id"] = note_id
+    return result
+
+
+def get_patient_timeline_data(patient_id: str) -> dict:
+    """Gather clinical state, encounters, labs, treatments for timeline rendering."""
+    if USE_GRAPH_DEMO:
+        from graph_demo_data import demo_get_patient_timeline_data
+
+        return demo_get_patient_timeline_data(patient_id)
+    clinical = get_patient_clinical_state(patient_id)
+    journey = get_patient_full_journey(patient_id)
+    notes = get_patient_notes(patient_id)
+    diseases_rows = get_patients_with_diseases()
+
+    patient_name = None
+    age = None
+    sex = None
+    diseases = []
+    for r in diseases_rows:
+        if r.get("patient_id") == patient_id:
+            patient_name = patient_name or r.get("patient_name")
+            age = age or r.get("patient_age")
+            sex = sex or r.get("patient_sex")
+            if r.get("disease_id"):
+                diseases.append({"id": r["disease_id"], "name": r.get("disease_name")})
+
+    encounters = []
+    labs = []
+    drugs = []
+    procedures = []
+    seen_enc = set()
+    seen_lab = set()
+    seen_drug = set()
+    seen_proc = set()
+    for r in journey:
+        patient_name = patient_name or r.get("patient_name")
+        age = age or r.get("age")
+        sex = sex or r.get("sex")
+        eid = r.get("encounter_id")
+        if eid and eid not in seen_enc:
+            seen_enc.add(eid)
+            encounters.append({
+                "id": eid, "date": r.get("encounter_date"),
+                "type": r.get("encounter_type"), "notes": r.get("encounter_notes"),
+                "doctor": r.get("doctor_name"),
+            })
+        lid = r.get("lab_id")
+        if lid and lid not in seen_lab:
+            seen_lab.add(lid)
+            labs.append({
+                "id": lid, "name": r.get("lab_name"),
+                "value": r.get("lab_result_value"), "unit": r.get("lab_unit"),
+                "date": r.get("lab_date"),
+            })
+        did = r.get("drug_id")
+        if did and did not in seen_drug:
+            seen_drug.add(did)
+            drugs.append({
+                "id": did, "name": r.get("drug_name"),
+                "date": r.get("prescribed_on"), "dose": r.get("dose"),
+            })
+        pid = r.get("procedure_id")
+        if pid and pid not in seen_proc:
+            seen_proc.add(pid)
+            procedures.append({
+                "id": pid, "name": r.get("procedure_name"),
+                "date": r.get("procedure_date"),
+            })
+
+    return {
+        "patient_id": patient_id,
+        "patient_name": patient_name or patient_id,
+        "age": age,
+        "sex": sex,
+        "diseases": diseases,
+        "clinical_state": clinical,
+        "encounters": encounters,
+        "labs": labs,
+        "drugs": drugs,
+        "procedures": procedures,
+        "notes": notes,
     }
 
 
 def get_patients_for_comparison(patient_ids: list[str]) -> list[dict]:
     """Fetch diseases, symptoms, violation nodes, and clinical state for specific patients."""
+    if USE_GRAPH_DEMO:
+        from graph_demo_data import demo_get_patients_for_comparison
+
+        return demo_get_patients_for_comparison(patient_ids)
     cypher = """
     MATCH (p:Patient) WHERE p.id IN $ids
     OPTIONAL MATCH (p)-[:HAS_DISEASE]->(d:Disease)
@@ -593,6 +968,10 @@ def get_all_patients_graph_data():
     Used by GET /patients-sync so the frontend can merge patients that were
     created after the static dashboard HTML was generated.
     """
+    if USE_GRAPH_DEMO:
+        from graph_demo_data import demo_get_all_patients_graph_data
+
+        return demo_get_all_patients_graph_data()
     cypher = """
     MATCH (p:Patient)
     OPTIONAL MATCH (p)-[:HAS_DISEASE]->(d:Disease)
@@ -625,6 +1004,10 @@ def get_sepsis_guidelines():
     Get sepsis guideline with recommended actions, labs, drugs, procedures, follow-up.
     Returns list of dicts with guideline and related node ids/names and thresholds.
     """
+    if USE_GRAPH_DEMO:
+        from graph_demo_data import demo_get_sepsis_guidelines
+
+        return demo_get_sepsis_guidelines()
     cypher = """
     MATCH (g:SepsisGuideline)
     OPTIONAL MATCH (g)-[:RECOMMENDS_ACTION]->(a:RecommendedAction)
@@ -642,3 +1025,180 @@ def get_sepsis_guidelines():
            collect(DISTINCT f.id) AS followup_ids, collect(DISTINCT f.name) AS followup_names
     """
     return run_query(cypher)
+
+
+def _try_graph_query(cypher_v5: str, cypher_v4: str, params: dict) -> list:
+    try:
+        return run_query(cypher_v5, params)
+    except Exception:
+        return run_query(cypher_v4, params)
+
+
+def collect_patient_scoped_graph_rows(patient_id: str) -> list[dict]:
+    """
+    All relationships reachable from Patient {id} using only allowed clinical traversals
+    (patient-centric edges, guideline edges from patient's diseases, encounter/appointment chains).
+    Does not start from generic Disease/Drug nodes.
+    """
+    pid = (patient_id or "").strip()
+    if not pid:
+        return []
+
+    direct_types = [
+        "HAS_DISEASE",
+        "HAS_SYMPTOM",
+        "HAS_VIOLATION",
+        "HAS_CLINICAL_STATE",
+        "TREATED_WITH",
+        "HAD_PROCEDURE",
+        "VISITS",
+        "HAS_APPOINTMENT",
+        "HAS_ENCOUNTER",
+        "HAS_NOTE",
+        "FOLLOWED_UP_WITH",
+    ]
+    params = {"pid": pid, "direct_types": direct_types}
+
+    q_direct_v5 = """
+    MATCH (p:Patient {id: $pid})-[r]->(m)
+    WHERE type(r) IN $direct_types
+    RETURN elementId(p) AS src_id, elementId(m) AS tgt_id, type(r) AS rel_type,
+           labels(p)[0] AS src_label, labels(m)[0] AS tgt_label,
+           properties(p) AS src_props, properties(m) AS tgt_props
+    """
+    q_direct_v4 = """
+    MATCH (p:Patient {id: $pid})-[r]->(m)
+    WHERE type(r) IN $direct_types
+    RETURN toString(id(p)) AS src_id, toString(id(m)) AS tgt_id, type(r) AS rel_type,
+           labels(p)[0] AS src_label, labels(m)[0] AS tgt_label,
+           properties(p) AS src_props, properties(m) AS tgt_props
+    """
+
+    q_guideline_v5 = """
+    MATCH (p:Patient {id: $pid})-[:HAS_DISEASE]->(d:Disease)-[r]->(x)
+    WHERE type(r) IN ['RECOMMENDED_DRUG', 'RECOMMENDED_PROCEDURE', 'FOLLOW_UP']
+    RETURN elementId(d) AS src_id, elementId(x) AS tgt_id, type(r) AS rel_type,
+           labels(d)[0] AS src_label, labels(x)[0] AS tgt_label,
+           properties(d) AS src_props, properties(x) AS tgt_props
+    """
+    q_guideline_v4 = """
+    MATCH (p:Patient {id: $pid})-[:HAS_DISEASE]->(d:Disease)-[r]->(x)
+    WHERE type(r) IN ['RECOMMENDED_DRUG', 'RECOMMENDED_PROCEDURE', 'FOLLOW_UP']
+    RETURN toString(id(d)) AS src_id, toString(id(x)) AS tgt_id, type(r) AS rel_type,
+           labels(d)[0] AS src_label, labels(x)[0] AS tgt_label,
+           properties(d) AS src_props, properties(x) AS tgt_props
+    """
+
+    q_enc_v5 = """
+    MATCH (p:Patient {id: $pid})-[:HAS_ENCOUNTER]->(e:Encounter)-[r]->(x)
+    WHERE type(r) IN ['PERFORMED_BY', 'ORDERED_LAB', 'PRESCRIBED', 'INCLUDES_PROCEDURE']
+    RETURN elementId(e) AS src_id, elementId(x) AS tgt_id, type(r) AS rel_type,
+           labels(e)[0] AS src_label, labels(x)[0] AS tgt_label,
+           properties(e) AS src_props, properties(x) AS tgt_props
+    """
+    q_enc_v4 = """
+    MATCH (p:Patient {id: $pid})-[:HAS_ENCOUNTER]->(e:Encounter)-[r]->(x)
+    WHERE type(r) IN ['PERFORMED_BY', 'ORDERED_LAB', 'PRESCRIBED', 'INCLUDES_PROCEDURE']
+    RETURN toString(id(e)) AS src_id, toString(id(x)) AS tgt_id, type(r) AS rel_type,
+           labels(e)[0] AS src_label, labels(x)[0] AS tgt_label,
+           properties(e) AS src_props, properties(x) AS tgt_props
+    """
+
+    q_appt_v5 = """
+    MATCH (p:Patient {id: $pid})-[:HAS_APPOINTMENT]->(a:Appointment)-[r:AT_HOSPITAL]->(h:Hospital)
+    RETURN elementId(a) AS src_id, elementId(h) AS tgt_id, type(r) AS rel_type,
+           labels(a)[0] AS src_label, labels(h)[0] AS tgt_label,
+           properties(a) AS src_props, properties(h) AS tgt_props
+    """
+    q_appt_v4 = """
+    MATCH (p:Patient {id: $pid})-[:HAS_APPOINTMENT]->(a:Appointment)-[r:AT_HOSPITAL]->(h:Hospital)
+    RETURN toString(id(a)) AS src_id, toString(id(h)) AS tgt_id, type(r) AS rel_type,
+           labels(a)[0] AS src_label, labels(h)[0] AS tgt_label,
+           properties(a) AS src_props, properties(h) AS tgt_props
+    """
+
+    rows: list[dict] = []
+    rows.extend(_try_graph_query(q_direct_v5, q_direct_v4, params))
+    rows.extend(_try_graph_query(q_guideline_v5, q_guideline_v4, {"pid": pid}))
+    rows.extend(_try_graph_query(q_enc_v5, q_enc_v4, {"pid": pid}))
+    rows.extend(_try_graph_query(q_appt_v5, q_appt_v4, {"pid": pid}))
+    return rows
+
+
+def get_patient_scoped_graph_payload(patient_id: str) -> dict:
+    """
+    Return {\"nodes\": [...], \"relationships\": [...]} for vis-network.
+    Raises ValueError if the patient id does not exist.
+    """
+    from patient_graph_payload import rows_to_vis_payload
+
+    pid = (patient_id or "").strip()
+    if not pid:
+        return {"nodes": [], "relationships": []}
+
+    if USE_GRAPH_DEMO:
+        from graph_demo_data import demo_collect_patient_scoped_graph_rows, demo_patient_exists
+
+        if not demo_patient_exists(pid):
+            raise ValueError(f"Patient not found: {pid}")
+        merged = demo_collect_patient_scoped_graph_rows(pid)
+    else:
+        chk = run_query("MATCH (p:Patient {id: $pid}) RETURN count(p) AS c", {"pid": pid})
+        if not chk or chk[0].get("c", 0) == 0:
+            raise ValueError(f"Patient not found: {pid}")
+
+        merged = collect_patient_scoped_graph_rows(pid)
+    seen: set[tuple] = set()
+    out_rows: list[dict] = []
+    for r in merged:
+        k = (r.get("src_id"), r.get("tgt_id"), r.get("rel_type"))
+        if None in k:
+            continue
+        if k in seen:
+            continue
+        seen.add(k)
+        out_rows.append(r)
+
+    return rows_to_vis_payload(out_rows, pid)
+
+
+def get_compare_graph_payload(patient_ids: list[str]) -> dict:
+    """
+    Merge patient-scoped subgraphs for 2+ patients into one vis-network payload.
+    Shared Neo4j nodes (e.g. the same Disease) appear once; each Patient node is kept.
+    """
+    from patient_graph_payload import rows_to_vis_payload
+
+    pids = list(dict.fromkeys(p for p in (patient_ids or []) if p))
+    if len(pids) < 2:
+        raise ValueError("At least two patient ids are required for compare graph.")
+
+    seen_rows: set[tuple] = set()
+    merged_rows: list[dict] = []
+
+    for pid in pids:
+        if USE_GRAPH_DEMO:
+            from graph_demo_data import demo_collect_patient_scoped_graph_rows, demo_patient_exists
+
+            if not demo_patient_exists(pid):
+                continue
+            rows = demo_collect_patient_scoped_graph_rows(pid)
+        else:
+            chk = run_query(
+                "MATCH (p:Patient {id: $pid}) RETURN count(p) AS c", {"pid": pid}
+            )
+            if not chk or chk[0].get("c", 0) == 0:
+                continue
+            rows = collect_patient_scoped_graph_rows(pid)
+
+        for r in rows:
+            k = (r.get("src_id"), r.get("tgt_id"), r.get("rel_type"))
+            if None in k or k in seen_rows:
+                continue
+            seen_rows.add(k)
+            merged_rows.append(r)
+
+    if not merged_rows:
+        return {"nodes": [], "relationships": []}
+
+    return rows_to_vis_payload(merged_rows, pids[0])

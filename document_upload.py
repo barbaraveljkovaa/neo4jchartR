@@ -8,6 +8,8 @@ with a regex-based fallback when no API key is configured.
 Kept separate from neo4j_ops and dashboard so the extraction logic is modular.
 """
 
+from __future__ import annotations
+
 import json
 import os
 import re
@@ -66,7 +68,9 @@ def extract_medical_data(text: str) -> dict[str, Any]:
             "sex": str | None,
             "symptoms": [str, ...],
             "diseases": [str, ...],
-            "clinical_values": { "MAP": float, ... }
+            "clinical_values": { "MAP": float, ... },
+            "lab_results": [{name, result_value, unit, normal_range, date}, ...],
+            "imaging_studies": [{name, modality, findings, date}, ...],
         }
 
     Tries OpenAI first; falls back to regex extraction.
@@ -103,12 +107,20 @@ Return ONLY valid JSON (no markdown fences) with these fields:
     "heart_rate": number or null,
     "temperature": number or null,
     "respiratory_rate": number or null
-  }
+  },
+  "lab_results": [
+    {"name": "HbA1c", "result_value": "7.2", "unit": "%", "normal_range": "4-6", "date": "2024-06-01 or null"}
+  ],
+  "imaging_studies": [
+    {"name": "CT chest", "modality": "CT", "findings": "brief impression text", "date": "2024-06-01 or null"}
+  ]
 }
 
 Rules:
 - Symptoms as simple lowercase terms (e.g. "fever", "hypotension")
 - Diseases as proper medical names (e.g. "Sepsis", "Pneumonia")
+- lab_results: blood tests, chemistry, CBC, etc. with numeric result_value as string
+- imaging_studies: CT, MRI, X-ray, ultrasound — include modality and findings/impression when present
 - Only include clinical values explicitly mentioned with numeric values
 - Use null / empty list when not found
 
@@ -229,6 +241,9 @@ def _extract_with_regex(text: str) -> dict[str, Any]:
     elif re.search(r"\b(?:female|woman)\b", text_lower):
         sex = "F"
 
+    lab_results = _extract_lab_results_regex(text)
+    imaging_studies = _extract_imaging_regex(text)
+
     return _normalize({
         "patient_name": patient_name,
         "age": age,
@@ -236,12 +251,137 @@ def _extract_with_regex(text: str) -> dict[str, Any]:
         "symptoms": symptoms,
         "diseases": diseases,
         "clinical_values": cv,
+        "lab_results": lab_results,
+        "imaging_studies": imaging_studies,
     })
+
+
+def _extract_lab_results_regex(text: str) -> list[dict[str, Any]]:
+    """Parse common blood-test lines from plain-text lab reports."""
+    labs: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    patterns: list[tuple[str, str, str, str]] = [
+        (r"(?:hba1c|hemoglobin a1c)[:\s]*(\d+(?:\.\d+)?)\s*%?", "HbA1c", "%", "4-6"),
+        (r"(?:fasting\s+)?glucose[:\s]*(\d+(?:\.\d+)?)\s*(?:mg/dl)?", "Glucose", "mg/dL", "70-100"),
+        (r"(?:wbc|white blood cell(?: count)?|cbc wbc)[:\s]*(\d+(?:\.\d+)?)\s*(?:k/u?l)?", "CBC WBC", "K/uL", "4-11"),
+        (r"(?:hemoglobin|hgb)[:\s]*(\d+(?:\.\d+)?)\s*(?:g/dl)?", "Hemoglobin", "g/dL", "12-16"),
+        (r"(?:platelet(?: count)?|plt)[:\s]*(\d+(?:\.\d+)?)\s*(?:k/u?l)?", "Platelets", "K/uL", "150-400"),
+        (r"creatinine[:\s]*(\d+(?:\.\d+)?)\s*(?:mg/dl)?", "Creatinine", "mg/dL", "0.6-1.2"),
+        (r"lactate[:\s]*(\d+(?:\.\d+)?)\s*(?:mmol/l)?", "Lactate", "mmol/L", "<2.0"),
+        (r"(?:sodium|na\+?)[:\s]*(\d+(?:\.\d+)?)\s*(?:meq/l|mmol/l)?", "Sodium", "mEq/L", "136-145"),
+        (r"(?:potassium|k\+?)[:\s]*(\d+(?:\.\d+)?)\s*(?:meq/l|mmol/l)?", "Potassium", "mEq/L", "3.5-5.0"),
+    ]
+    for pattern, name, unit, normal in patterns:
+        m = re.search(pattern, text, re.IGNORECASE)
+        if m and name not in seen:
+            seen.add(name)
+            labs.append(
+                {
+                    "name": name,
+                    "result_value": m.group(1),
+                    "unit": unit,
+                    "normal_range": normal,
+                    "date": None,
+                }
+            )
+    return labs
+
+
+def _extract_imaging_regex(text: str) -> list[dict[str, Any]]:
+    """Parse CT / X-ray / MRI mentions from imaging reports."""
+    studies: list[dict[str, Any]] = []
+    text_lower = text.lower()
+    findings = ""
+    for label in ("impression", "findings", "conclusion", "result"):
+        m = re.search(rf"{label}[:\s]+(.{{10,240}}?)(?:\n\n|\n[A-Z]|$)", text, re.IGNORECASE | re.DOTALL)
+        if m:
+            findings = re.sub(r"\s+", " ", m.group(1)).strip()
+            break
+
+    if re.search(r"\bct\b.*\bchest\b|\bchest\s+ct\b|\bct\s+chest\b", text_lower):
+        studies.append(
+            {
+                "name": "CT chest",
+                "modality": "CT",
+                "findings": findings or "Chest CT report uploaded.",
+                "date": None,
+            }
+        )
+    elif "ct scan" in text_lower or re.search(r"\bcomputed tomography\b", text_lower):
+        studies.append(
+            {
+                "name": "CT scan",
+                "modality": "CT",
+                "findings": findings or "CT report uploaded.",
+                "date": None,
+            }
+        )
+    elif re.search(r"\bchest x-?ray\b|\bx-?ray chest\b|\bcxr\b", text_lower):
+        studies.append(
+            {
+                "name": "Chest X-ray",
+                "modality": "X-ray",
+                "findings": findings or "Chest radiograph report uploaded.",
+                "date": None,
+            }
+        )
+    elif re.search(r"\bmri\b", text_lower):
+        studies.append(
+            {
+                "name": "MRI",
+                "modality": "MRI",
+                "findings": findings or "MRI report uploaded.",
+                "date": None,
+            }
+        )
+    return studies
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+def _normalize_lab_results(raw: list) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for item in raw or []:
+        if not isinstance(item, dict):
+            continue
+        name = (item.get("name") or "").strip()
+        val = item.get("result_value")
+        if val is None:
+            val = item.get("value")
+        if not name or val is None or str(val).strip() == "":
+            continue
+        out.append(
+            {
+                "name": name,
+                "result_value": str(val).strip(),
+                "unit": (item.get("unit") or "").strip(),
+                "normal_range": (item.get("normal_range") or "").strip(),
+                "date": item.get("date"),
+            }
+        )
+    return out
+
+
+def _normalize_imaging_studies(raw: list) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for item in raw or []:
+        if not isinstance(item, dict):
+            continue
+        name = (item.get("name") or item.get("modality") or "").strip()
+        if not name:
+            continue
+        out.append(
+            {
+                "name": name,
+                "modality": (item.get("modality") or "").strip(),
+                "findings": (item.get("findings") or item.get("impression") or "").strip(),
+                "date": item.get("date"),
+            }
+        )
+    return out
+
 
 def _normalize(data: dict) -> dict[str, Any]:
     return {
@@ -257,4 +397,6 @@ def _normalize(data: dict) -> dict[str, Any]:
             for k, v in (data.get("clinical_values") or {}).items()
             if v is not None
         },
+        "lab_results": _normalize_lab_results(data.get("lab_results") or []),
+        "imaging_studies": _normalize_imaging_studies(data.get("imaging_studies") or []),
     }

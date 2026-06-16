@@ -2,6 +2,8 @@
 Sepsis clinical compliance: generate patient data with SOFA/clinical state and sepsis guideline graph.
 Uses neo4j_connect.run_query for all Neo4j operations.
 """
+
+from __future__ import annotations
 import random
 from neo4j_connect import run_query
 
