@@ -36,6 +36,26 @@ VIOLATION_SEVERITY_COLORS = {
 }
 DEFAULT_NODE_COLOR = "#94a3b8"
 EDGE_COLOR_VIOLATION = "#dc2626"
+EDGE_COLOR_CLINICAL = "rgba(59,130,246,0.72)"
+EDGE_COLOR_ADMIN = "rgba(148,163,184,0.65)"
+CLINICAL_REL_TYPES = frozenset({"HAS_DISEASE", "HAS_SYMPTOM", "HAD_PROCEDURE"})
+COMPLIANCE_REL_TYPES = frozenset({"HAS_VIOLATION"})
+ADMIN_REL_TYPES = frozenset({
+    "HAS_APPOINTMENT", "AT_HOSPITAL", "VISITS", "FOLLOW_UP",
+    "RECOMMENDED_DRUG", "RECOMMENDED_PROCEDURE", "TREATED_WITH", "ORDERED_LAB",
+})
+
+
+def _edge_color(rel_type: str, *, is_protocol_violation: bool = False) -> dict[str, str]:
+    if rel_type in COMPLIANCE_REL_TYPES or is_protocol_violation:
+        return {"color": EDGE_COLOR_VIOLATION, "highlight": "#991b1b"}
+    if rel_type in CLINICAL_REL_TYPES:
+        return {"color": EDGE_COLOR_CLINICAL, "highlight": "#2563eb"}
+    if rel_type in ADMIN_REL_TYPES:
+        return {"color": EDGE_COLOR_ADMIN, "highlight": "#64748b"}
+    return {"color": "rgba(148,163,184,0.42)", "highlight": "#64748b"}
+
+
 EDGE_REL_RGBA = {
     "HAS_DISEASE": "rgba(239,68,68,0.58)",
     "HAS_SYMPTOM": "rgba(244,114,182,0.58)",
@@ -59,20 +79,20 @@ EDGE_REL_RGBA = {
 }
 
 NODE_SIZE_BY_TYPE = {
-    "Patient": 30,
-    "Doctor": 26,
-    "Disease": 24,
-    "Drug": 23,
-    "Symptom": 22,
-    "ClinicalState": 23,
-    "Violation": 23,
-    "Hospital": 22,
-    "Appointment": 21,
-    "Procedure": 22,
-    "FollowUp": 21,
-    "Encounter": 22,
-    "Lab": 20,
-    "PatientNote": 20,
+    "Patient": 54,
+    "Doctor": 36,
+    "Disease": 36,
+    "Drug": 34,
+    "Symptom": 34,
+    "ClinicalState": 34,
+    "Violation": 34,
+    "Hospital": 34,
+    "Appointment": 28,
+    "Procedure": 34,
+    "FollowUp": 28,
+    "Encounter": 34,
+    "Lab": 28,
+    "PatientNote": 28,
 }
 NODE_BORDER_BY_TYPE = {
     "Patient": "#1e40af",
@@ -125,14 +145,30 @@ def _collect_has_disease_names(rows: list[dict]) -> list[str]:
     return names
 
 
-def _short_display_label(name: str, node_type: str, *, patient_max: int = 26, other_max: int = 20) -> str:
+def _short_display_label(name: str, node_type: str, *, patient_max: int = 24, other_max: int = 22, extended_max: int = 40) -> str:
     n = (name or "").strip()
     if not n:
         return ""
-    lim = patient_max if node_type == "Patient" else other_max
+    if node_type in ("Violation", "ClinicalState"):
+        lim = extended_max
+    elif node_type == "Patient":
+        lim = patient_max
+    else:
+        lim = other_max
     if len(n) <= lim:
         return n
     return n[: max(1, lim - 1)] + "…"
+
+
+def _node_font(node_type: str) -> dict[str, str | int]:
+    return {
+        "size": 18 if node_type == "Patient" else 17,
+        "face": "Inter, system-ui, sans-serif",
+        "color": "#0f172a",
+        "background": "rgba(255,255,255,0.92)",
+        "strokeWidth": 2,
+        "strokeColor": "#ffffff",
+    }
 
 
 def _violation_edge_keys_for_patient(compliance_result: dict, patient_id: str) -> set[tuple[str, str, str]]:
@@ -175,7 +211,7 @@ def rows_to_vis_payload(rows: list[dict], patient_id: str) -> dict[str, Any]:
         tooltip_props_by_nid[nid] = dict(props)
         bg = NODE_COLORS.get(label, DEFAULT_NODE_COLOR)
         border = NODE_BORDER_BY_TYPE.get(label, "#475569")
-        size = NODE_SIZE_BY_TYPE.get(label, 22)
+        size = NODE_SIZE_BY_TYPE.get(label, 34)
         canvas_label = _short_display_label(raw_name, label)
         clinical_metrics: dict[str, Any] | None = None
 
@@ -193,12 +229,13 @@ def rows_to_vis_payload(rows: list[dict], patient_id: str) -> dict[str, Any]:
                 "gcs": gcs,
                 "creatinine": creat,
             }
+            canvas_label = _short_display_label(raw_name, "ClinicalState")
         elif label == "Violation":
             sev = (props.get("severity") or "warning").lower()
             bg = VIOLATION_SEVERITY_COLORS.get(sev, "#f59e0b")
             desc = props.get("description") or raw_name
             raw_name = str(desc)
-            canvas_label = _short_display_label(desc, "Violation", other_max=16)
+            canvas_label = _short_display_label(desc, "Violation")
 
         # Match legacy pyvis dashboard: circular nodes (dot), soft shadow, label stroke (readable on color fills).
         node_entry: dict[str, Any] = {
@@ -210,29 +247,29 @@ def rows_to_vis_payload(rows: list[dict], patient_id: str) -> dict[str, Any]:
             "node_type": label,
             "full_label": raw_name,
             "short_label": canvas_label,
+            "base_size": size,
+            "glow_color": bg,
             "patient_id": patient_id if label == "Patient" and id_prop == patient_id else None,
             "size": size,
-            "borderWidth": 2,
-            "shadow": {
-                "enabled": True,
-                "size": 12,
-                "x": 0,
-                "y": 3,
-                "color": "rgba(15,23,42,0.07)",
-            },
+            "borderWidth": 4 if label == "Violation" else 2,
+            "shadow": (
+                {"enabled": True, "size": 22, "x": 0, "y": 0, "color": "rgba(220,38,38,0.55)"}
+                if label == "Violation"
+                else {"enabled": True, "size": 12, "x": 0, "y": 3, "color": "rgba(15,23,42,0.07)"}
+            ),
             "color": {
                 "background": bg,
                 "border": border,
-                "highlight": {"background": bg, "border": "#0f172a"},
-                "hover": {"background": bg, "border": "#0f172a"},
+                "highlight": {
+                    "background": bg,
+                    "border": "#450a0a" if label == "Violation" else "#0f172a",
+                },
+                "hover": {
+                    "background": bg,
+                    "border": "#450a0a" if label == "Violation" else "#0f172a",
+                },
             },
-            "font": {
-                "size": 17 if label == "Patient" else (15 if label in ("Doctor", "Disease") else 13),
-                "face": "Inter, system-ui, sans-serif",
-                "color": "#0f172a",
-                "strokeWidth": 2,
-                "strokeColor": "rgba(255,255,255,0.9)",
-            },
+            "font": _node_font(label),
         }
         if label == "Patient":
             node_entry["patient_age"] = props.get("age")
@@ -277,17 +314,16 @@ def rows_to_vis_payload(rows: list[dict], patient_id: str) -> dict[str, Any]:
                 "id": "e_" + str(ei),
                 "from": sid,
                 "to": tid,
-                "label": rt,
+                "label": "",
                 "title": etitle,
                 "rel_type": rt,
                 "is_violation": True,
                 "width": 2.6,
-                "color": {"color": EDGE_COLOR_VIOLATION, "highlight": "#991b1b"},
+                "color": _edge_color(rt, is_protocol_violation=True),
                 "arrows": "to",
             }
         else:
-            rgba = EDGE_REL_RGBA.get(rt, "rgba(148,163,184,0.42)")
-            width = 1.75 if rt in ("HAS_DISEASE", "HAS_SYMPTOM", "TREATS", "RECOMMENDED_DRUG") else 1.4
+            width = 1.75 if rt in CLINICAL_REL_TYPES else 1.4
             etitle = edge_tooltip_plain(
                 rt, sn, tn, source_type=sl, target_type=tl, compliant_pathway=(rt in TREATMENT_REL_TYPES)
             )
@@ -295,11 +331,11 @@ def rows_to_vis_payload(rows: list[dict], patient_id: str) -> dict[str, Any]:
                 "id": "e_" + str(ei),
                 "from": sid,
                 "to": tid,
-                "label": rt,
+                "label": "",
                 "title": etitle,
                 "rel_type": rt,
                 "width": width,
-                "color": {"color": rgba, "highlight": "#334155"},
+                "color": _edge_color(rt),
                 "arrows": "to",
             }
         ei += 1

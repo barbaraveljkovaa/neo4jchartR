@@ -421,20 +421,50 @@ def patient_timeline_endpoint(patient_id: str):
         return "rising" if diff > 0 else "falling"
 
     events = []
+    n_slots = max(len(hours) - 1, 1)
     for enc in raw.get("encounters") or []:
-        events.append({"type": "encounter", "label": (enc.get("type") or "Encounter") + (": " + enc["notes"][:60] if enc.get("notes") else ""), "date": enc.get("date"), "doctor": enc.get("doctor")})
-    for drug in raw.get("drugs") or []:
-        events.append({"type": "drug", "label": "Rx: " + (drug.get("name") or drug["id"]) + (" " + drug["dose"] if drug.get("dose") else ""), "date": drug.get("date")})
-    for proc in raw.get("procedures") or []:
-        events.append({"type": "procedure", "label": "Procedure: " + (proc.get("name") or proc["id"]), "date": proc.get("date")})
-    for lab in raw.get("labs") or []:
-        events.append({"type": "lab", "label": (lab.get("name") or lab["id"]) + ": " + str(lab.get("value") or "—") + " " + (lab.get("unit") or ""), "date": lab.get("date")})
+        events.append({
+            "type": "encounter",
+            "label": (enc.get("type") or "Encounter") + (": " + enc["notes"][:60] if enc.get("notes") else ""),
+            "date": enc.get("date"),
+            "doctor": enc.get("doctor"),
+            "ref_id": enc.get("id"),
+            "ref_node_type": "Appointment",
+            "hour_index": 0,
+        })
+    for i, drug in enumerate(raw.get("drugs") or []):
+        events.append({
+            "type": "drug",
+            "label": "Rx: " + (drug.get("name") or drug["id"]) + (" " + drug["dose"] if drug.get("dose") else ""),
+            "date": drug.get("date"),
+            "ref_id": drug.get("id"),
+            "ref_node_type": "Drug",
+            "hour_index": min(1 + i, n_slots),
+        })
+    for i, proc in enumerate(raw.get("procedures") or []):
+        events.append({
+            "type": "procedure",
+            "label": "Procedure: " + (proc.get("name") or proc["id"]),
+            "date": proc.get("date"),
+            "ref_id": proc.get("id"),
+            "ref_node_type": "Procedure",
+            "hour_index": min(2 + i * 2, n_slots),
+        })
+    for i, lab in enumerate(raw.get("labs") or []):
+        events.append({
+            "type": "lab",
+            "label": (lab.get("name") or lab["id"]) + ": " + str(lab.get("value") or "—") + " " + (lab.get("unit") or ""),
+            "date": lab.get("date"),
+            "ref_id": lab.get("id"),
+            "ref_node_type": "LabCheck",
+            "hour_index": min(1 + i, n_slots),
+        })
     if cs.get("antibiotics_active"):
-        events.append({"type": "treatment", "label": "Antibiotics started", "date": None})
+        events.append({"type": "treatment", "label": "Antibiotics started", "date": None, "ref_id": None, "ref_node_type": "ClinicalState", "hour_index": 2})
     if cs.get("vasopressors_active"):
-        events.append({"type": "treatment", "label": "Vasopressors started", "date": None})
+        events.append({"type": "treatment", "label": "Vasopressors started", "date": None, "ref_id": None, "ref_node_type": "ClinicalState", "hour_index": 3})
     if cs.get("cultures_ordered"):
-        events.append({"type": "treatment", "label": "Blood cultures ordered", "date": None})
+        events.append({"type": "treatment", "label": "Blood cultures ordered", "date": None, "ref_id": None, "ref_node_type": "LabCheck", "hour_index": 1})
 
     return {
         "patient_id": pid,
