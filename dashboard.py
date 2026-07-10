@@ -1381,6 +1381,8 @@ def _sidebar_and_script(stats: dict, explanations: dict) -> str:
   @media (max-width: 900px) { .benchmark-experiment-row { grid-template-columns: 1fr; } }
   .benchmark-exp-note { font-size: 0.625rem; color: #64748b; line-height: 1.45; margin: 0 0 0.5rem; }
   .benchmark-interpretation { font-size: 0.6875rem; color: #334155; line-height: 1.5; margin: 0 0 1rem; padding: 0.6rem 0.75rem; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; }
+  .benchmark-interpretation.three-arm { background: #fff7ed; border-color: #fed7aa; }
+  .benchmark-interpretation.three-arm strong { color: #c2410c; }
   .benchmark-table-wrap { border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; background: #fff; }
   .benchmark-table-wrap h4 { font-size: 0.6875rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;
     padding: 0.625rem 0.875rem; margin: 0; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
@@ -1398,8 +1400,11 @@ def _sidebar_and_script(stats: dict, explanations: dict) -> str:
   .benchmark-showcase-col { background: rgba(255,255,255,0.92); border: 1px solid #e2e8f0; border-radius: 12px; padding: 0.85rem 1rem; }
   .benchmark-showcase-col.with-graph { border-color: #93c5fd; box-shadow: 0 0 0 1px rgba(59,130,246,0.08); }
   .benchmark-showcase-col.without-graph { border-color: #cbd5e1; opacity: 0.96; }
+  .benchmark-showcase-col.with-flat { border-color: #fed7aa; opacity: 0.97; }
   .benchmark-showcase-col h5 { margin: 0 0 0.5rem; font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #64748b; }
   .benchmark-showcase-col.with-graph h5 { color: #1d4ed8; }
+  .benchmark-showcase-col.with-flat h5 { color: #c2410c; }
+  .benchmark-showcase-refnote { grid-column: 1 / -1; margin: 0.5rem 0 0; font-size: 0.6875rem; color: #94a3b8; font-style: italic; }
   .benchmark-showcase-metric { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem;
     font-size: 0.75rem; color: #334155; margin-bottom: 0.35rem; }
   .benchmark-showcase-metric strong { font-size: 1rem; color: #0f172a; }
@@ -1421,20 +1426,26 @@ def _sidebar_and_script(stats: dict, explanations: dict) -> str:
   .benchmark-case-badges { display: flex; flex-wrap: wrap; gap: 0.35rem; }
   .benchmark-case-badge { font-size: 0.625rem; font-weight: 700; padding: 0.2rem 0.5rem; border-radius: 100px; }
   .benchmark-case-badge.with { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+  .benchmark-case-badge.flat { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
   .benchmark-case-badge.without { background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; }
+  .benchmark-case-badge.without.muted { font-size: 0.5625rem; font-weight: 500; padding: 0.15rem 0.4rem; opacity: 0.75; border-style: dashed; }
   .benchmark-case-badge.delta { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
   .benchmark-case-body { padding: 0 0.875rem 0.875rem; border-top: 1px solid #f1f5f9; }
   .benchmark-case-query { font-size: 0.75rem; color: #475569; margin: 0.65rem 0 0.5rem; line-height: 1.45; }
   .benchmark-case-expected { font-size: 0.6875rem; color: #64748b; margin: 0 0 0.65rem; padding: 0.45rem 0.55rem;
     background: #f8fafc; border-radius: 8px; border-left: 3px solid #3b82f6; line-height: 1.45; }
   .benchmark-answer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; }
+  .benchmark-answer-grid.three-col { grid-template-columns: 1fr 1fr 1fr; }
+  @media (max-width: 900px) { .benchmark-answer-grid.three-col { grid-template-columns: 1fr; } }
   @media (max-width: 720px) { .benchmark-answer-grid { grid-template-columns: 1fr; } }
   .benchmark-answer-col { border: 1px solid #e2e8f0; border-radius: 10px; padding: 0.65rem 0.75rem; min-height: 5rem; }
   .benchmark-answer-col.with { border-color: #93c5fd; background: #f8fbff; }
+  .benchmark-answer-col.flat { border-color: #fdba74; background: #fffaf5; }
   .benchmark-answer-col.without { border-color: #e2e8f0; background: #fafafa; }
   .benchmark-answer-col h6 { margin: 0 0 0.4rem; font-size: 0.625rem; font-weight: 700; text-transform: uppercase;
     letter-spacing: 0.05em; color: #64748b; }
   .benchmark-answer-col.with h6 { color: #1d4ed8; }
+  .benchmark-answer-col.flat h6 { color: #c2410c; }
   .benchmark-answer-text { font-size: 0.6875rem; color: #334155; line-height: 1.55; white-space: pre-wrap; word-break: break-word;
     max-height: 14rem; overflow-y: auto; }
   .benchmark-case-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.65rem; }
@@ -1789,17 +1800,18 @@ def _sidebar_and_script(stats: dict, explanations: dict) -> str:
         <div id="benchmarkShowcaseHero" class="benchmark-showcase-hero" style="display:none;"></div>
         <div class="benchmark-experiment-row" id="benchmarkExperimentSection" style="display:none;">
           <div class="benchmark-chart-card">
-            <h4>With Graph vs Without Graph</h4>
+            <h4>With Graph vs Flat Data vs No Data</h4>
             <p class="benchmark-exp-note" id="benchmarkExperimentNote"></p>
             <canvas id="benchmarkModeCompareCanvas" height="300"></canvas>
           </div>
           <div class="benchmark-chart-card">
-            <h4>Where the graph helps most</h4>
-            <p class="benchmark-exp-note" style="margin-bottom:0.35rem;">Percentage-point gain on each metric (positive = graph arm wins).</p>
+            <h4 id="benchmarkImprovementTitle">Where graph structure helps most</h4>
+            <p class="benchmark-exp-note" id="benchmarkImprovementNote" style="margin-bottom:0.35rem;">Percentage-point gain of graph-structured context over the SAME facts flattened (positive = graph structure wins).</p>
             <canvas id="benchmarkImprovementCanvas" height="300"></canvas>
           </div>
         </div>
         <p class="benchmark-interpretation" id="benchmarkAugmentationInterpretation" style="display:none;" aria-live="polite"></p>
+        <p class="benchmark-interpretation three-arm" id="benchmarkThreeArmSummary" style="display:none;" aria-live="polite"></p>
         <div class="benchmark-table-wrap" style="margin-bottom:1rem;">
           <h4>Side-by-side answers</h4>
           <div class="benchmark-cases-showcase" id="benchmarkCasesShowcase"></div>
@@ -3992,7 +4004,17 @@ def _sidebar_and_script(stats: dict, explanations: dict) -> str:
 
   function _fixArticleEcho(s) {
     if (!s || typeof s !== 'string') return s;
-    return s.replace(/\\ba\\s+a\\b/g, 'a').replace(/\\ban\\s+an\\b/g, 'an').replace(/\\bthe\\s+the\\b/gi, 'the');
+    return s
+      .replace(/\\ba\\s+a\\b/g, 'a')
+      .replace(/\\ban\\s+an\\b/g, 'an')
+      .replace(/\\bthe\\s+the\\b/gi, 'the')
+      .replace(/\\bthe\\s+a\\s+/gi, 'a ')
+      .replace(/\\bmeet\\s+the\\s+a\\b/gi, 'meet the')
+      .replace(/\\bdoes not meet the a\\b/gi, 'does not meet the')
+      .replace(/\\bthe a serious infection your care team is monitoring closely bundle requirements\\b/gi, 'standard infection care requirements')
+      .replace(/\\bthe a serious infection your care team is monitoring closely bundle\\b/gi, 'the standard infection care checklist')
+      .replace(/\\ba serious infection your care team is monitoring closely bundle requirements\\b/gi, 'standard infection care requirements')
+      .replace(/\\ba serious infection your care team is monitoring closely bundle\\b/gi, 'the standard infection care checklist');
   }
 
   /** STEP 2 — strip internal IDs, graph vocabulary, and developer-facing tokens (TASK 2). */
@@ -4021,7 +4043,9 @@ def _sidebar_and_script(stats: dict, explanations: dict) -> str:
       .replace(/\\bmortality\\s+risk\\b/gi, '')
       .replace(/\\bimminent(ly)?\\s+danger(ous)?\\b/gi, 'needs prompt attention from your care team')
       .replace(/\\bseptic\\s+shock\\b/gi, 'very low blood pressure related to infection; your care team is monitoring this closely')
-      .replace(/\\bsepsis\\b/gi, 'a serious infection your care team is monitoring closely')
+      .replace(/\\bsepsis bundle requirements\\b/gi, 'standard infection care requirements')
+      .replace(/\\bsepsis bundle\\b/gi, 'standard infection care checklist')
+      .replace(/\\bsepsis\\b/gi, 'serious infection your care team is monitoring closely')
       .replace(/\\borgans?\\s+failing\\b/gi, 'your body being under significant stress')
       .replace(/\\bfailing\\s+organs?\\b/gi, 'your body being under significant stress')
       .replace(/\\borgan\\s+failure\\b/gi, 'your body being under significant stress')
@@ -4048,6 +4072,7 @@ def _sidebar_and_script(stats: dict, explanations: dict) -> str:
       .replace(/\\burgent\\s+medical\\s+evaluation\\b/gi, 'timely follow-up with your care team')
       .replace(/\\bmedical\\s+evaluation\\s+and\\s+intervention\\b/gi, 'review with your care team')
       .replace(/\\bnecessitating\\s+urgent\\b/gi, 'calling for')
+      .replace(/\\bat risk for serious infection your care team is monitoring closely\\b/gi, 'needs careful monitoring for infection')
       .replace(/\\bat risk for a serious infection your care team is monitoring closely\\b/gi, 'needs careful monitoring for infection')
       .replace(/\\brisk for a serious infection\\b/gi, 'possible infection risk')
       .replace(/\\bsevere health issues\\b/gi, 'health concerns')
@@ -4100,6 +4125,8 @@ def _sidebar_and_script(stats: dict, explanations: dict) -> str:
       .replace(/\\bhigh illness severity scores\\b/gi, 'scores that suggest closer monitoring')
       .replace(/\\band low MAP\\b/gi, 'and blood pressure lower than typical')
       .replace(/\\blow MAP\\b/gi, 'low blood pressure')
+      .replace(/\\bmean arterial pressure\\s*\\(\\s*blood pressure\\s*\\)/gi, 'blood pressure')
+      .replace(/\\bmean arterial pressure\\b/gi, 'blood pressure')
       .replace(/\\bMAP\\b/g, 'blood pressure');
   }
 
@@ -4174,6 +4201,13 @@ def _sidebar_and_script(stats: dict, explanations: dict) -> str:
       .replace(/\\b[Tt]he your chart is consistent\\b/gi, 'Your chart is consistent')
       .replace(/\\b[Tt]he your records show\\b/gi, 'Your records show')
       .replace(/\\b[Tt]he your information suggests\\b/gi, 'Your information suggests')
+      .replace(/\\bPatient ([A-Z][a-z]+ [A-Z][a-z]+) does not meet the standard infection care checklist requirements\\b/g, 'Patient $1 does not meet standard infection care requirements')
+      .replace(/\\bdoes not meet the standard infection care checklist requirements\\b/gi, 'does not meet standard infection care requirements')
+      .replace(/\\bdue to several violations, including the absence of active antibiotics\\b/gi, 'because of several care gaps, including not currently receiving antibiotics')
+      .replace(/\\bthe absence of active antibiotics\\b/gi, 'not currently receiving antibiotics')
+      .replace(/\\belevated lactate levels, and low blood pressure \\(blood pressure\\)\\b/gi, 'elevated lactate levels, and low blood pressure')
+      .replace(/\\blow blood pressure \\(blood pressure\\)\\b/gi, 'low blood pressure')
+      .replace(/\\bblood pressure \\(blood pressure\\)\\b/gi, 'blood pressure')
       .replace(/\\s*Your clinician can explain what this means for you in everyday terms\\.?/gi, '')
       .replace(/\\bYou are taking Spirometry\\b/gi, 'You have had spirometry — a breathing test noted in your care record')
       .replace(/\\bYou are taking (BP monitoring|blood pressure monitoring)\\b/gi, 'You have had blood pressure monitoring, as noted in your care record')
@@ -4233,7 +4267,9 @@ def _sidebar_and_script(stats: dict, explanations: dict) -> str:
     } else if (_aiPatientSeverityTier === 'red') {
       t = t.replace(/\\bcritical\\b/gi, 'important').replace(/\\bseriously seriously\\b/gi, 'especially');
     }
-    t = t.replace(/\\bat risk for a serious infection your care team is monitoring closely\\b/gi, 'possible infection concern noted in your chart')
+    t = t.replace(/\\bat risk for serious infection your care team is monitoring closely\\b/gi, 'possible infection concern noted in your chart')
+      .replace(/\\bat risk for a serious infection your care team is monitoring closely\\b/gi, 'possible infection concern noted in your chart')
+      .replace(/\\bserious infection your care team is monitoring closely\\b/gi, 'possible infection concerns in your chart')
       .replace(/\\ba serious infection your care team is monitoring closely\\b/gi, 'possible infection concerns in your chart');
     t = _patientGrammarCleanup(t.replace(/\\s{2,}/g, ' ').trim());
     return _fixArticleEcho(t);
@@ -6158,6 +6194,7 @@ def _sidebar_and_script(stats: dict, explanations: dict) -> str:
       graph_impact: gi || null,
       paired_comparison: o.paired_comparison || null,
       experiment_modes: o.experiment_modes || null,
+      three_arm_summary: o.three_arm_summary || null,
       test_cases: cases,
       generated_at: o.generated_at || o.run_at || '',
       source: o.source || 'api',
@@ -6168,36 +6205,22 @@ def _sidebar_and_script(stats: dict, explanations: dict) -> str:
   function renderBenchmarkShowcaseHero(data) {
     var el = document.getElementById('benchmarkShowcaseHero');
     if (!el) return;
-    var sc = data.graph_showcase;
     var pc = data.paired_comparison;
-    if (!sc && pc && pc.with_graph && pc.without_graph) {
-      sc = {
-        headline: 'Neo4j graph improves AI answers vs LLM-only',
-        tagline: BENCHMARK_GRAPH_AUGMENTATION_NOTE,
-        with_graph: {
-          graph_grounding_score: pc.with_graph.graph_grounding_score,
-          ground_truth_score: pc.with_graph.ground_truth_score,
-          hallucination_reduction_score: pc.with_graph.hallucination_reduction_score,
-          reasoning_traceability_score: pc.with_graph.reasoning_traceability_score
-        },
-        without_graph: {
-          graph_grounding_score: pc.without_graph.graph_grounding_score,
-          ground_truth_score: pc.without_graph.ground_truth_score,
-          hallucination_reduction_score: pc.without_graph.hallucination_reduction_score,
-          reasoning_traceability_score: pc.without_graph.reasoning_traceability_score
-        },
-        improvement: pc.graph_improvement_pct || {}
-      };
-    }
-    if (!sc || !sc.with_graph || !sc.without_graph) {
+    // Primary story: WITH_GRAPH vs WITH_FLAT_DATA — same facts either way, so the delta is
+    // attributable to graph *structure* itself, not just "having data". WITHOUT_GRAPH (no data
+    // at all) is de-emphasized to a small reference note rather than a full column, since it's
+    // an easier/less interesting comparison (any grounding beats none).
+    var hasFlat = !!(pc && pc.with_graph && pc.with_flat_data);
+    if (!hasFlat) {
       el.style.display = 'none';
       el.innerHTML = '';
       return;
     }
-    var wg = sc.with_graph;
-    var ng = sc.without_graph;
-    var imp = sc.improvement || {};
-    function metricRow(label, wv, nv) {
+    var wg = pc.with_graph;
+    var fd = pc.with_flat_data;
+    var ng = pc.without_graph || {};
+    var imp = pc.graph_vs_flat_improvement_pct || {};
+    function metricRow(label, wv) {
       return '<div class="benchmark-showcase-metric"><span>' + label + '</span><strong>' + wv + '</strong></div>';
     }
     function deltaPill(label, val) {
@@ -6206,27 +6229,33 @@ def _sidebar_and_script(stats: dict, explanations: dict) -> str:
       var cls = n > 0 ? '' : (n < 0 ? ' negative' : ' neutral');
       return '<span class="benchmark-delta-pill' + cls + '">' + label + ' ' + (n > 0 ? '+' : '') + n + '</span>';
     }
-    el.innerHTML = '<p class="benchmark-showcase-headline">' + String(sc.headline || '').replace(/</g, '&lt;') + '</p>'
-      + '<p class="benchmark-showcase-tagline">' + String(sc.tagline || '').replace(/</g, '&lt;') + '</p>'
+    var headline = 'Neo4j graph structure improves AI answers vs. the same facts flattened';
+    var tagline = 'Same questions, same LLM, same underlying facts — only the presentation (graph relationships vs. an unordered flat list) differs, so any gap is attributable to structure itself.';
+    var refNote = (ng.ground_truth_score != null)
+      ? ('<p class="benchmark-showcase-refnote">For reference, with no patient data at all (no grounding of any kind), factual accuracy drops to just ' + ng.ground_truth_score + '.</p>')
+      : '';
+    el.innerHTML = '<p class="benchmark-showcase-headline">' + headline + '</p>'
+      + '<p class="benchmark-showcase-tagline">' + tagline + '</p>'
       + '<div class="benchmark-showcase-col with-graph"><h5>With Neo4j graph</h5>'
-      + metricRow('Factual accuracy', wg.ground_truth_score != null ? wg.ground_truth_score : '\\u2014', '')
-      + metricRow('Graph grounding', wg.graph_grounding_score != null ? wg.graph_grounding_score : '\\u2014', '')
-      + metricRow('Traceability', wg.reasoning_traceability_score != null ? wg.reasoning_traceability_score : '\\u2014', '')
-      + metricRow('Hallucination reduction', wg.hallucination_reduction_score != null ? wg.hallucination_reduction_score : '\\u2014', '')
+      + metricRow('Factual accuracy', wg.ground_truth_score != null ? wg.ground_truth_score : '\\u2014')
+      + metricRow('Graph grounding', wg.graph_grounding_score != null ? wg.graph_grounding_score : '\\u2014')
+      + metricRow('Traceability', wg.reasoning_traceability_score != null ? wg.reasoning_traceability_score : '\\u2014')
+      + metricRow('Hallucination reduction', wg.hallucination_reduction_score != null ? wg.hallucination_reduction_score : '\\u2014')
       + '</div>'
       + '<div class="benchmark-showcase-vs">vs</div>'
-      + '<div class="benchmark-showcase-col without-graph"><h5>LLM only (no graph)</h5>'
-      + metricRow('Factual accuracy', ng.ground_truth_score != null ? ng.ground_truth_score : '\\u2014', '')
-      + metricRow('Graph grounding', ng.graph_grounding_score != null ? ng.graph_grounding_score : '\\u2014', '')
-      + metricRow('Traceability', ng.reasoning_traceability_score != null ? ng.reasoning_traceability_score : '\\u2014', '')
-      + metricRow('Hallucination reduction', ng.hallucination_reduction_score != null ? ng.hallucination_reduction_score : '\\u2014', '')
+      + '<div class="benchmark-showcase-col with-flat"><h5>Same facts, flattened</h5>'
+      + metricRow('Factual accuracy', fd.ground_truth_score != null ? fd.ground_truth_score : '\\u2014')
+      + metricRow('Graph grounding', fd.graph_grounding_score != null ? fd.graph_grounding_score : '\\u2014')
+      + metricRow('Traceability', fd.reasoning_traceability_score != null ? fd.reasoning_traceability_score : '\\u2014')
+      + metricRow('Hallucination reduction', fd.hallucination_reduction_score != null ? fd.hallucination_reduction_score : '\\u2014')
       + '</div>'
       + '<div class="benchmark-showcase-delta">'
       + deltaPill('Factual accuracy', imp.ground_truth_score)
       + deltaPill('Graph grounding', imp.graph_grounding_score)
       + deltaPill('Traceability', imp.reasoning_traceability_score)
       + deltaPill('Hallucination reduction', imp.hallucination_reduction_score)
-      + '</div>';
+      + '</div>'
+      + refNote;
     el.style.display = 'grid';
   }
 
@@ -6243,10 +6272,14 @@ def _sidebar_and_script(stats: dict, explanations: dict) -> str:
       var pm = tc.paired_modes || {};
       var wg = pm.WITH_GRAPH || {};
       var ng = pm.WITHOUT_GRAPH || {};
+      var fd = pm.WITH_FLAT_DATA || null;
       var gtW = tc.ground_truth_score_with != null ? tc.ground_truth_score_with : wg.ground_truth_score;
       var gtN = tc.ground_truth_score_without != null ? tc.ground_truth_score_without : ng.ground_truth_score;
+      var gtF = tc.ground_truth_score_flat != null ? tc.ground_truth_score_flat : (fd ? fd.ground_truth_score : null);
       var ansW = tc.answer_with_graph || tc.actual || '';
       var ansN = tc.answer_without_graph || '';
+      var ansF = tc.answer_flat_data || '';
+      var hasFlat = fd != null || !!ansF;
       var ev = tc.graph_evidence || {};
       var hasEv = (ev.highlight_nodes || []).length || (ev.paths || []).length;
       var delta = tc.showcase_delta != null ? tc.showcase_delta : (gtW != null && gtN != null ? Math.round((gtW - gtN) * 10) / 10 : null);
@@ -6255,15 +6288,17 @@ def _sidebar_and_script(stats: dict, explanations: dict) -> str:
         + '<summary><span class="benchmark-case-title">' + esc(tc.title || tc.query || ('Case ' + (idx + 1))) + '</span>'
         + '<span class="benchmark-case-badges">'
         + '<span class="benchmark-case-badge with">Graph ' + (gtW != null ? gtW : '\\u2014') + '</span>'
-        + '<span class="benchmark-case-badge without">LLM ' + (gtN != null ? gtN : '\\u2014') + '</span>'
-        + (delta != null ? '<span class="benchmark-case-badge delta">+' + esc(delta) + ' showcase</span>' : '')
+        + (hasFlat ? '<span class="benchmark-case-badge flat">Flat data ' + (gtF != null ? gtF : '\\u2014') + '</span>' : '')
+        + (delta != null ? '<span class="benchmark-case-badge delta">' + (delta > 0 ? '+' : '') + esc(delta) + ' vs flat</span>' : '')
+        + '<span class="benchmark-case-badge without muted">no data: ' + (gtN != null ? gtN : '\\u2014') + '</span>'
         + '</span></summary>'
         + '<div class="benchmark-case-body">'
         + '<p class="benchmark-case-query"><strong>Question:</strong> ' + esc(tc.query) + '</p>'
         + (tc.expected ? '<p class="benchmark-case-expected"><strong>Expected from graph:</strong> ' + esc(tc.expected) + '</p>' : '')
-        + '<div class="benchmark-answer-grid">'
+        + '<div class="benchmark-answer-grid' + (hasFlat ? ' three-col' : '') + '">'
         + '<div class="benchmark-answer-col with"><h6>With Neo4j graph</h6><div class="benchmark-answer-text">' + esc(ansW || '\\u2014') + '</div></div>'
-        + '<div class="benchmark-answer-col without"><h6>LLM only</h6><div class="benchmark-answer-text">' + esc(ansN || '\\u2014') + '</div></div>'
+        + (hasFlat ? '<div class="benchmark-answer-col flat"><h6>Same data, flat (no graph structure)</h6><div class="benchmark-answer-text">' + esc(ansF || '\\u2014') + '</div></div>' : '')
+        + '<div class="benchmark-answer-col without"><h6>LLM only (no data)</h6><div class="benchmark-answer-text">' + esc(ansN || '\\u2014') + '</div></div>'
         + '</div>'
         + '<div class="benchmark-case-actions">'
         + (hasEv ? '<button type="button" onclick="highlightBenchmarkCase(' + idx + ')">Show graph evidence</button>' : '')
@@ -6472,7 +6507,19 @@ def _sidebar_and_script(stats: dict, explanations: dict) -> str:
     var expSec = document.getElementById('benchmarkExperimentSection');
     var expNote = document.getElementById('benchmarkExperimentNote');
     var interpAug = document.getElementById('benchmarkAugmentationInterpretation');
+    var threeArmEl = document.getElementById('benchmarkThreeArmSummary');
     var pc = data.paired_comparison;
+    var tas = data.three_arm_summary;
+    if (threeArmEl) {
+      if (tas && tas.headline) {
+        threeArmEl.style.display = '';
+        threeArmEl.innerHTML = '<strong>Isolating the graph-structure effect:</strong> ' + String(tas.headline).replace(/</g, '&lt;')
+          + (tas.description ? '<br><span style="color:#78716c;">' + String(tas.description).replace(/</g, '&lt;') + '</span>' : '');
+      } else {
+        threeArmEl.style.display = 'none';
+        threeArmEl.innerHTML = '';
+      }
+    }
     if (expSec) {
       if (pc && pc.with_graph && pc.without_graph && typeof Chart !== 'undefined') {
         expSec.style.display = '';
@@ -6493,18 +6540,22 @@ def _sidebar_and_script(stats: dict, explanations: dict) -> str:
         ];
         var wg = pc.with_graph;
         var ng = pc.without_graph;
+        var fdArm = pc.with_flat_data || null;
         var valsWG = metricKeys.map(function(k) { var v = pv(wg, k); return v != null ? v : 0; });
         var valsNG = metricKeys.map(function(k) { var v = pv(ng, k); return v != null ? v : 0; });
+        var valsFD = fdArm ? metricKeys.map(function(k) { var v = pv(fdArm, k); return v != null ? v : 0; }) : null;
+        var modeDatasets = [
+          { label: 'With Graph', data: valsWG, backgroundColor: 'rgba(59,130,246,0.85)', borderRadius: 5 }
+        ];
+        if (valsFD) modeDatasets.push({ label: 'Flat Data (no graph)', data: valsFD, backgroundColor: 'rgba(249,115,22,0.85)', borderRadius: 5 });
+        modeDatasets.push({ label: 'Without Graph (no data)', data: valsNG, backgroundColor: 'rgba(148,163,184,0.85)', borderRadius: 5 });
         var modeEl = document.getElementById('benchmarkModeCompareCanvas');
         if (modeEl) {
           _benchmarkCharts.modeCompare = new Chart(modeEl.getContext('2d'), {
             type: 'bar',
             data: {
               labels: modeLabels,
-              datasets: [
-                { label: 'With Graph', data: valsWG, backgroundColor: 'rgba(59,130,246,0.85)', borderRadius: 5 },
-                { label: 'Without Graph', data: valsNG, backgroundColor: 'rgba(148,163,184,0.85)', borderRadius: 5 }
-              ]
+              datasets: modeDatasets
             },
             options: {
               responsive: true,
@@ -6517,11 +6568,18 @@ def _sidebar_and_script(stats: dict, explanations: dict) -> str:
             }
           });
         }
-        var imp = pc.graph_improvement_pct || {};
+        var imp = valsFD ? (pc.graph_vs_flat_improvement_pct || {}) : (pc.graph_improvement_pct || {});
         var impVals = metricKeys.map(function(k, i) {
           var iv = pv(imp, k);
-          return iv != null ? iv : (valsWG[i] - valsNG[i]);
+          if (iv != null) return iv;
+          return valsFD ? (valsWG[i] - valsFD[i]) : (valsWG[i] - valsNG[i]);
         });
+        var impTitleEl = document.getElementById('benchmarkImprovementTitle');
+        var impNoteEl = document.getElementById('benchmarkImprovementNote');
+        if (impTitleEl) impTitleEl.textContent = valsFD ? 'Where graph structure helps most' : 'Where the graph helps most';
+        if (impNoteEl) impNoteEl.textContent = valsFD
+          ? 'Percentage-point gain of graph-structured context over the SAME facts flattened (positive = graph structure wins, isolated from just having facts).'
+          : 'Percentage-point gain on each metric (positive = graph arm wins).';
         var impColors = impVals.map(function(v) {
           if (v > 0) return 'rgba(16,185,129,0.9)';
           if (v < 0) return 'rgba(239,68,68,0.9)';

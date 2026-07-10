@@ -140,7 +140,21 @@ python3 dashboard.py
 
 ## Clinical AI benchmark
 
-The dashboard can run a **live evaluation** that compares graph-grounded AI answers with an LLM-only arm on fixed clinical questions. Implementation: `benchmark_eval.py` (`run_clinical_benchmark()`), exposed as **`GET /benchmark`** on the **dashboard API** (`api_server.py`), not on `api.py`.
+The dashboard can run a **live evaluation** that compares graph-grounded AI answers against two baselines on fixed clinical questions, using three paired arms with identical prompts per case:
+
+- **WITH_GRAPH** — facts retrieved via Neo4j relationship traversal, presented with explicit relationship labels (`HAS_DISEASE`, `TREATED_WITH`, `HAS_VIOLATION`, etc.).
+- **WITH_FLAT_DATA** — the *same underlying facts*, pulled from the *same retrieval functions*, but flattened into an unordered, non-relational list (no relationship labels, no disease→drug→procedure linkage). Isolates whether graph *structure* helps beyond simply having the same facts.
+- **WITHOUT_GRAPH** — no institution-specific facts at all (LLM-only). Isolates whether having *any* real facts — regardless of structure — is what reduces hallucination.
+
+`graph_vs_flat_improvement_pct` in the response isolates the graph-structure effect (WITH_GRAPH − WITH_FLAT_DATA); `flat_vs_without_improvement_pct` isolates the effect of having any real facts at all (WITH_FLAT_DATA − WITHOUT_GRAPH). This separates two distinct claims that a single WITH_GRAPH-vs-WITHOUT_GRAPH comparison would otherwise conflate.
+
+**Most of the questions above test fact *recall*, not relational reasoning** — and on recall, flat data does about as well as graph data, since the hard comparison (protocol vs. actual treatment) is precomputed in Python before either arm ever reaches the LLM. To isolate whether graph **structure** itself helps the model *reason*, the suite also includes dedicated **multi-hop protocol-binding cases** (`case_type: "multi_hop"` in `_BENCHMARK_SUITE`, e.g. patients with two diagnoses — one protocol-compliant, one not):
+
+- The LLM is given only **raw** facts (disease → recommended drug/procedure, patient → actual drug/procedure) with **no precomputed compliance conclusion**, and must itself trace the disease → protocol → actual-treatment chain and state a verdict per diagnosis.
+- WITH_GRAPH sees explicit relationship-labeled edges (`HAS_DISEASE`, `RECOMMENDED_DRUG`, `TREATED_WITH`, …); WITH_FLAT_DATA sees the *same paired facts* (each protocol drug still attached to its own disease, the way a relational foreign key would preserve it) but with no relationship-type vocabulary and shuffled record order.
+- Grading uses `multi_hop_accuracy`: an independently computed ground-truth key (`ai_compliance.check_patient_compliance`, never shown to the LLM) checks whether each verdict was bound to the *right* patient **and** the *right* diagnosis — not just whether the right words appear anywhere in the answer. See `three_arm_summary.multi_hop_reasoning` in the response.
+
+Implementation: `benchmark_eval.py` (`run_clinical_benchmark()`), exposed as **`GET /benchmark`** on the **dashboard API** (`api_server.py`), not on `api.py`.
 
 **Run the API** (same host/port as the dashboard’s AI base URL, usually `http://127.0.0.1:8000`):
 

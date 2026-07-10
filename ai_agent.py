@@ -392,7 +392,21 @@ def _infer_focus_condition(question: str, summary: dict[str, Any]) -> dict[str, 
 
     if len(diseases) == 1:
         d = diseases[0]
-        return {"type": "disease", "id": d.get("disease_id"), "name": d.get("disease_name") or d.get("disease_id")}
+        did = d.get("disease_id")
+        dname = d.get("disease_name") or did
+        if _focus_matches_disease(q, dname, did):
+            return {"type": "disease", "id": did, "name": dname}
+        sepsis_info = summary.get("sepsis_info")
+        has_sepsis_violations = (
+            clinical_state is not None
+            and sepsis_info is not None
+            and not sepsis_info.get("compliance", True)
+        )
+        # Do not narrow to disease-only when sepsis/clinical-state violations exist unless
+        # the question explicitly names that disease — general questions need the full picture.
+        if has_sepsis_violations:
+            return None
+        return {"type": "disease", "id": did, "name": dname}
 
     violating = [
         r for r in (analysis.get("compliance_results") or [])
@@ -1618,13 +1632,20 @@ def ask_agent_with_context(
             "If the user’s question references a different patient id, explain that your context is locked to "
             f"patient_id={pid0} and answer only from data for {pid0}. "
             "Protocol guidelines are reference templates — tie them only to diseases that appear for this patient. "
-            "If data is missing, say so; do not invent or borrow from other patients."
+            "If data is missing, say so; do not invent or borrow from other patients. "
+            "If the patient context lists Violations (disease protocol or sepsis/clinical state), you MUST state them "
+            "in Conclusion and Evidence — never describe the patient as fully compliant when any violation is listed."
         )
         if focus_condition:
             system_prompt += (
                 f" Focus condition for this answer: {focus_condition.get('name')}."
                 " When summarizing violations, recommendations, expected care, and actual treatment,"
                 " restrict the answer to this focus condition only unless the user explicitly asks to compare conditions."
+            )
+        elif summaries[0].get("violations"):
+            system_prompt += (
+                " This patient has documented violation(s) in context — lead with those gaps in Conclusion, "
+                "then note any compliant areas (e.g. disease-specific care) separately."
             )
 
     if len(ids) == 1:
@@ -1644,7 +1665,7 @@ def ask_agent_with_context(
 
     scoped_payload = _build_scoped_response(summaries[0], focus_condition) if (len(ids) == 1 and focus_condition) else None
     if scoped_payload:
-        all_violation = scoped_payload["violation"]
+        all_violation = bool(scoped_payload["violation"]) or any(s.get("violations") for s in summaries)
         protocol_expected = scoped_payload["protocol_expected"]
         actual_treatment = scoped_payload["actual_treatment"]
         highlight_nodes = scoped_payload["highlight_nodes"]
